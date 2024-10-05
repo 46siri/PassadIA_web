@@ -9,6 +9,7 @@ import ProfileModal from './Profile';
 import CityCouncilBoard from './CityCouncilBoard';
 import MerchantBoard from './MerchantBoard';
 import Favorites from './Favorites';
+import History from './History';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -21,6 +22,7 @@ root.render(
         <Route path="/signup" element={<SignUpModal />} />
         <Route path="/Profile" element={<ProfileModal />} />
         <Route path="/Favorites" element={<Favorites />} />
+        <Route path="/History" element={<History />} />
         <Route path="/WalkerBoard" element={<WalkerBoard />} />
         <Route path="/CityCouncilBoard" element={<CityCouncilBoard />} />
         <Route path="/MerchantBoard" element={<MerchantBoard />} />

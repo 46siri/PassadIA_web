@@ -359,7 +359,7 @@ const WalkerBoard = ({ onLogout }) => {
               variant="contained"
               color="secondary"
               startIcon={<DirectionsWalkIcon />}
-              //onClick={handleStartWalkClick}
+              onClick={handleStartWalkClick}
           >
               Start Walk
           </Button>

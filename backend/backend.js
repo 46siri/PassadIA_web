@@ -469,15 +469,18 @@ app.get('/history', async (req, res) => {
             return res.status(200).json({ message: 'No history found', history: [] });
         }
 
-        // Fetch each history location by its document ID
+        // Fetch each history entry by its document ID and include the start date
         const locations = [];
-        for (const locationId of history) {
+        for (const entry of history) {
+            const { locationId, startDate } = entry; // Ensure the history stores { locationId, startDate }
+
             try {
                 // Get the location document by its Firestore document ID
                 const locationDoc = await getDoc(doc(WalkwayCollection, locationId));
 
                 if (locationDoc.exists()) {
-                    locations.push({ id: locationDoc.id, ...locationDoc.data() });
+                    // Include the location details and the associated start date in the response
+                    locations.push({ id: locationDoc.id, startDate, ...locationDoc.data() });
                 } else {
                     console.warn(`Location with ID ${locationId} not found.`);
                 }
@@ -486,14 +489,15 @@ app.get('/history', async (req, res) => {
             }
         }
 
-        // Return the list of history locations
+        // Return the list of history locations with start dates
         res.status(200).json({ history: locations });
-        //console.log('History with location details fetched:', locations);
+        //console.log('History with location details and start dates fetched:', locations);
     } catch (error) {
         console.error('Error fetching history:', error);
         res.status(500).json({ error: 'Error fetching history' });
     }
 });
+
 
 //------------------------------- remove location from history --------------------------------
 app.post('/removeHistory', async (req, res) => {

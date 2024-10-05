@@ -303,9 +303,9 @@ const ProfileModal = ({ onLogout }) => {
                 </MenuItem>
             </Menu>
 
-            <Grid2 container spacing={2} alignItems="center" justifyContent="space-between">
+            <Grid2>
                     {/* Avatar Section */}
-                    <Grid2 item xs={12} sm={5} style={{textAlign: 'center'}}>
+                    <Grid2 item xs={12} sm={5} style={{textAlign: 'center'}} marginBottom={10}>
                             <Typography variant="h4" gutterBottom>{name}</Typography>
                             <AvatarStyled src={avatarURL}/>
                                 <input

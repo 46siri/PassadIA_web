@@ -23,5 +23,6 @@ const auth = getAuth(app);
 // Reference to the 'users' collection in Firestore
 const UserCollection = collection(db, 'users');
 const WalkwayCollection = collection(db, 'walkways');
+const InterestCollection = collection(db, 'interests');
 
-module.exports = { db, UserCollection, auth, WalkwayCollection }; 
+module.exports = { db, UserCollection, auth, WalkwayCollection, InterestCollection }; 

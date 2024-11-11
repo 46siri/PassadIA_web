@@ -10,6 +10,7 @@ import CityCouncilBoard from './CityCouncilBoard';
 import MerchantBoard from './MerchantBoard';
 import Favorites from './Favorites';
 import History from './History';
+import StartWalk from './StartWalk';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -26,6 +27,7 @@ root.render(
         <Route path="/WalkerBoard" element={<WalkerBoard />} />
         <Route path="/CityCouncilBoard" element={<CityCouncilBoard />} />
         <Route path="/MerchantBoard" element={<MerchantBoard />} />
+        <Route path="/StartWalk" element={<StartWalk />} />
       </Routes>
     </Router>
   </React.StrictMode>

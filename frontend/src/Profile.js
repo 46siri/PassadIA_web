@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Axios from "axios";
-import { Avatar, Button, Container, CssBaseline, IconButton, Typography, Menu, MenuItem, Grid2, CircularProgress, TextField, Card, CardContent, Paper, ThemeProvider } from '@mui/material';
+import { Avatar, Button, Container, CssBaseline, IconButton,Select, InputLabel,FormControl,FormControlLabel, Typography, Checkbox, Menu, MenuItem, Grid2, CircularProgress, TextField, Card, CardContent, Paper, ThemeProvider } from '@mui/material';
 import { styled, textAlign } from '@mui/system';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EditIcon from '@mui/icons-material/Edit';
@@ -37,6 +37,13 @@ export const Logo = styled('img')(({ theme }) => ({
     height: 'auto',
 }));
 
+export const LevelContainer = styled(Container)(({ theme }) => ({
+    position: 'absolute',
+    top: theme.spacing(60),
+    left: theme.spacing(50),
+    width: '200px',
+    height: 'auto',
+}));
 
 export const AvatarStyled = styled(Avatar)(({ theme }) => ({
     height: theme.spacing(50),
@@ -47,11 +54,10 @@ export const AvatarStyled = styled(Avatar)(({ theme }) => ({
 export const FormField = styled(TextField)(({ theme }) => ({
     marginBottom: theme.spacing(2),
     display: 'flex',
-    width: '100%', // Ensures the form field takes the full width of its container
-    maxWidth: '500px', // Set a maximum width to make the form smaller on larger screens
-    alignSelf: 'center', // Centers the form field horizontally
+    width: '100%',
+    maxWidth: '500px',
+    alignSelf: 'center',
 }));
-
 
 export const ProfileCard = styled('div')(({ theme }) => ({
     padding: theme.spacing(2),
@@ -79,6 +85,10 @@ export const IconStyled = styled('span')(({ theme }) => ({
     color: theme.palette.primary.main,
 }));
 
+const SelectStyled = styled(Select)({
+    ...theme.forms.select,
+});
+
 export const TextStyled = styled('span')(({ theme }) => ({
     verticalAlign: 'middle',
 }));
@@ -99,25 +109,6 @@ const MoreMenuButton = styled(IconButton)(({ theme }) => ({
     right: 20,
     top: 20,
 }));
-const GridContainer = styled(Grid2)(({ theme }) => ({
-    display: 'flex',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: theme.spacing(2),
-    marginRight: theme.spacing(50),
-}));
-const GridItem = styled(Grid2)(({ theme }) => ({
-    display: 'vertical',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(5),
-    marginLeft: theme.spacing(5),
-    marginRight: theme.spacing(5),
-}));
-
 
 const ProfileModal = ({ onLogout }) => {
     const [profileData, setProfileData] = useState(null);
@@ -137,6 +128,11 @@ const ProfileModal = ({ onLogout }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [success, setSuccess] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [interestsList, setInterestsList] = useState([]); // List of interests fetched from backend
+    const [selectedInterests, setSelectedInterests] = useState([]); // List of selected interests
+    const [showChangePhoto, setShowChangePhoto] = useState(false); 
+    const [points, setPoints] = useState(0);
+    const [level, setLevel] = useState([]);
 
     const navigate = useNavigate();
 
@@ -158,15 +154,6 @@ const ProfileModal = ({ onLogout }) => {
         }
     };
 
-    // Menu Handlers 
-    const handleClick = (event) => {
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleClose = () => {
-        setAnchorEl(null);
-    };
-
     const handleLogoClick = () => {
         if (role === 'Walker') {
             navigate('/WalkerBoard');
@@ -179,6 +166,15 @@ const ProfileModal = ({ onLogout }) => {
             navigate('/App');
         }
 
+    };
+
+    // Menu Handlers 
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
     };
 
     const handleEditToggle = () => {
@@ -196,9 +192,17 @@ const ProfileModal = ({ onLogout }) => {
                 setBirthdate(response.data.birthdate);
                 setHeight(response.data.height);
                 setWeight(response.data.weight);
-                setInterests(response.data.interests);
                 setBio(response.data.bio);
                 setAvatarURL(response.data.avatarURL);
+                setSelectedInterests(Array.isArray(response.data.interests) ? response.data.interests : []); // Garantir que é array
+                const interestsResponse = await Axios.get('http://localhost:8080/interests');
+                setInterestsList(interestsResponse.data);
+                const pointsResponse = await Axios.get('http://localhost:8080/points');
+                setPoints(pointsResponse.data);
+                console.log('Points:', pointsResponse.data);
+                const levelResponse = await Axios.get('http://localhost:8080/level');
+                setLevel(levelResponse.data);
+                console.log('Level:', levelResponse.data);
             } catch (error) {
                 setError('Error fetching profile data. Please try again.');
             } finally {
@@ -214,17 +218,16 @@ const ProfileModal = ({ onLogout }) => {
         setError(null);
 
         try {
-            // Send the updated profile data to the backend
             const response = await Axios.post('http://localhost:8080/updateProfile', {
-                email,       // Already fetched from state
+                email,       
                 userId,
-                name,        // Updated name
-                role,        // Updated role
-                birthdate,   // Updated birthdate
-                height,      // Updated height
-                weight,      // Updated weight
-                interests,   // Updated interests
-                bio,         // Updated bio
+                name,        
+                role,        
+                birthdate,   
+                height,      
+                weight,      
+                bio,         
+                interests: selectedInterests,
             });
 
             if (response.status === 200) {
@@ -237,22 +240,21 @@ const ProfileModal = ({ onLogout }) => {
             setLoading(false);
         }
     };
+
     const handleChangePhoto = async () => {
         setLoading(true);
         setError(null);
         try {
+            console.log('Uploading photo...');
             const response = await Axios.post('http://localhost:8080/changePhoto', {
-                email,
                 avatarURL,
             });
             if (response.status === 200) {
                 setSuccess('Photo updated successfully!');
             }
-        }
-        catch (error) {
+        } catch (error) {
             setError('Error updating photo: ' + error.message);
-        }
-        finally {
+        } finally {
             setLoading(false);
         }
     };
@@ -263,10 +265,19 @@ const ProfileModal = ({ onLogout }) => {
     }
 
     return (
-            <ThemeProvider theme={theme}>
+        <ThemeProvider theme={theme}>
             <CssBaseline />
             <AppContainer>
             <Logo src={logo} alt="logo" onClick={handleLogoClick} />
+            {/* Nível e Pontos */}
+            <LevelContainer>
+            <Typography variant="body1" style={{ marginTop: '10px' }}>
+                🏅 <strong>Level:</strong> {level.level}
+            </Typography>
+            <Typography variant="body1">
+                ⭐ <strong>Points:</strong> {points.points}
+            </Typography>
+            </LevelContainer>
             
             <MoreMenuButton
                 aria-label="more"
@@ -304,89 +315,148 @@ const ProfileModal = ({ onLogout }) => {
             </Menu>
 
             <Grid2>
-                    {/* Avatar Section */}
-                    <Grid2 item xs={12} sm={5} style={{textAlign: 'center'}} marginBottom={10}>
-                            <Typography variant="h4" gutterBottom>{name}</Typography>
-                            <AvatarStyled src={avatarURL}/>
-                                <input
-                                accept="image/*"
-                                style={{ display: 'none' }}
-                                id="avatar-upload"
-                                type="file"
-                                //onChange={handleEditAvatar}
-                                />
-                                <label htmlFor="avatar-upload">
-                            <Button variant="contained" color="primary" style={{ marginTop: '1rem' }} onClick={handleChangePhoto}>
+                {/* Avatar Section */}
+                <Grid2 item xs={12} sm={5} style={{ textAlign: 'center' }} marginBottom={10}>
+                <Typography variant="h4" gutterBottom>{name}</Typography>
+                    <label htmlFor="avatar-upload">
+                        <AvatarStyled
+                            src={avatarURL}
+                            onClick={() => document.getElementById('avatar-upload').click()} // Make the avatar clickable
+                            onMouseEnter={() => setShowChangePhoto(true)} // Show button on hover
+                            onMouseLeave={() => setShowChangePhoto(false)} // Hide button when not hovering
+                            style={{ cursor: 'pointer', position: 'relative' }}
+                        />
+                        <input
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            id="avatar-upload"
+                            type="file"
+                            onChange={handleChangePhoto} // Trigger file change
+                        />
+                        {showChangePhoto && (
+                            <Button
+                                variant="flex"
+                                color="grey"
+                                onClick={() => document.getElementById('avatar-upload').click()} // Button triggers file selection
+                                style={{
+                                    position: 'absolute',
+                                    top: '43%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    opacity: 0.8, // Slightly transparent to blend in with avatar
+                                }}
+                            >
                                 Change Photo
                             </Button>
-                                </label>
-                                {uploading && <CircularProgress />}
-                    </Grid2>
-                    {/* Profile Information Section */}
-                    <Grid2 container spacing={2}>
-                        <CardStyled>
-                            {isEditing ? (
-                                <>
-                                    <FormField fullWidth label="Edit Name" value={name} onChange={(e) => setName(e.target.value)} />
-                                    <FormField fullWidth label="Edit Role" value={role} onChange={(e) => setRole(e.target.value)} />
-                                    <FormField fullWidth label="Edit Birthdate" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} />
-                                    <FormField fullWidth label="Edit Height (cm)" value={height} onChange={(e) => setHeight(e.target.value)} />
-                                    <FormField fullWidth label="Edit Weight (Kg)" value={weight} onChange={(e) => setWeight(e.target.value)} />
-                                    <FormField fullWidth label="Edit Interests" value={interests} onChange={(e) => setInterests(e.target.value)} />
-                                    <FormField fullWidth label="Edit Bio" value={bio} onChange={(e) => setBio(e.target.value)} />
-                                    <EditButtonRight variant="contained" color="primary" onClick={handleSaveProfile}>Save Profile</EditButtonRight>
-                                    <EditButtonRight variant="contained" color="secondary" onClick={handleEditToggle}>Cancel</EditButtonRight>
-                                </>
-                            ) : (
-                                <CardContent>
-                                    <Grid2 container spacing={2} size={12}>
-                                        {/* Left Column */}
-                                        <GridItem item xs={12} sm={6}>
-                                            <Typography variant="body1">
-                                                <AccountCircleIcon/> <strong>User Id:</strong> {userId}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                <EmailIcon /> <strong>Email:</strong> {email}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                <CakeIcon /> <strong>Birthdate:</strong> {birthdate}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                <FitnessCenterIcon /> <strong>Weight (kg):</strong> {weight}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                <InfoIcon /> <strong>Bio:</strong> {bio}
-                                            </Typography>
-                                        </GridItem>
-
-                                        {/* Right Column */}
-                                        <GridItem item xs={12} sm={6}>
-                                            <Typography variant="body1">
-                                                <AccountCircleIcon /> <strong>Name:</strong> {name}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                <WorkIcon /> <strong>Role:</strong> {role}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                <HeightIcon /> <strong>Height (cm):</strong> {height}
-                                            </Typography>
-                                            <Typography variant="body1">
-                                                <FavoriteIcon /> <strong>Interests:</strong> {interests}
-                                            </Typography>
-                                        </GridItem>
-                                        </Grid2>
-                                        <EditButtonRight variant="contained" color="primary" startIcon={<EditIcon />} onClick={handleEditToggle}>
-                                            Edit Profile
-                                        </EditButtonRight>
-                                    </CardContent>
-                                )}
-                            </CardStyled>
-                        </Grid2>
+                        )}
+                    </label>
+                    {uploading && <CircularProgress />}
+                    
                 </Grid2>
 
-                <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>
-                    Logout
-                </LogoutButton>
+                {/* Profile Information Section */}
+                <Grid2 container spacing={2}>
+                    <CardStyled>
+                        {isEditing ? (
+                            <>
+                                <FormField fullWidth label="Edit Name" value={name} onChange={(e) => setName(e.target.value)} />
+                                <FormField fullWidth label="Edit ID" value={userId} onChange={(e) => setUserId(e.target.value)} />
+                                <FormField fullWidth label="Edit Birthdate" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} />
+                                <FormField fullWidth label="Edit Height (cm)" value={height} onChange={(e) => setHeight(e.target.value)} />
+                                <FormField fullWidth label="Edit Weight (Kg)" value={weight} onChange={(e) => setWeight(e.target.value)} />
+                                <FormField fullWidth label="Edit Bio" value={bio} onChange={(e) => setBio(e.target.value)} />
+                                <Typography variant="h6">Edit Interests</Typography>
+
+                                <FormControl required variant="outlined" sx={{ minWidth: 310, maxWidth: 600 }}>
+                                    <InputLabel id="interests-label">Interests</InputLabel>
+                                    <SelectStyled
+                                        labelId="interests-label"
+                                        id="interests"
+                                        multiple
+                                        value={selectedInterests} // Agora, seleciona múltiplos interesses
+                                        onChange={(e) => setSelectedInterests(e.target.value)} // Atualiza os interesses selecionados
+                                        renderValue={(selected) => selected
+                                            .map((interestId) => {
+                                                const interest = interestsList.find(i => i.id === interestId);
+                                                return interest ? interest.name : null;
+                                            })
+                                            .filter(Boolean)
+                                            .join(', ')} // Mostra os interesses selecionados no campo de seleção
+                                    >
+                                        {interestsList.map((interest) => (
+                                            <MenuItem key={interest.id} value={interest.id}>
+                                                {interest.name}
+                                            </MenuItem>
+                                        ))}
+                                    </SelectStyled>
+                                </FormControl>
+
+                                <EditButtonRight variant="contained" color="primary" onClick={handleSaveProfile}>Save Profile</EditButtonRight>
+                                <EditButtonRight variant="contained" color="secondary" onClick={handleEditToggle}>Cancel</EditButtonRight>
+                            </>
+                        ) : (
+                            <CardContent>
+                                <Grid2 container spacing={2} size={12}>
+                                    {/* Left Column */}
+                                    <Grid2 item xs={12} sm={6}>
+                                        <Typography variant="body1">
+                                            <AccountCircleIcon/> <strong>User Id:</strong> {userId}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            <EmailIcon /> <strong>Email:</strong> {email}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            <CakeIcon /> <strong>Birthdate:</strong> {birthdate}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            <FitnessCenterIcon /> <strong>Weight (kg):</strong> {weight}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            <InfoIcon /> <strong>Bio:</strong> {bio}
+                                        </Typography>
+                                    </Grid2>
+
+                                    {/* Right Column */}
+                                    <Grid2 item xs={12} sm={6}>
+                                        <Typography variant="body1">
+                                            <AccountCircleIcon /> <strong>Name:</strong> {name}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            <WorkIcon /> <strong>Role:</strong> {role}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            <HeightIcon /> <strong>Height (cm):</strong> {height}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                        <FavoriteIcon /> <strong>Interests:</strong></Typography>
+                                            {selectedInterests.length > 0 ? (
+                                                selectedInterests.map((interestId) => {
+                                                    const interest = interestsList.find((i) => i.id === interestId);
+                                                    return interest ? (
+                                                        <Typography key={interest.id}>
+                                                            {interest.name}
+                                                        </Typography>
+                                                    ) : null;
+                                                })
+                                            
+                                            ) : (
+                                                <Typography>No interests selected.</Typography>
+                                            )}
+                                        
+                                    </Grid2>
+                                </Grid2>
+                                <EditButtonRight variant="contained" color="primary" startIcon={<EditIcon />} onClick={handleEditToggle}>
+                                    Edit Profile
+                                </EditButtonRight>
+                            </CardContent>
+                        )}
+                    </CardStyled>
+                </Grid2>
+            </Grid2>
+
+            <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>
+                Logout
+            </LogoutButton>
             </AppContainer>
         </ThemeProvider>
     );

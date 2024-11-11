@@ -5,10 +5,11 @@ const session = require('express-session');
 const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
-const { UserCollection, auth, db, WalkwayCollection } = require('./firebase-config');
+const { UserCollection, auth, db, WalkwayCollection, InterestCollection } = require('./firebase-config');
 const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = require('firebase/auth');
 const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc} = require('firebase/firestore');
 const { c, u } = require('tar');
+
 
 const app = express();
 // create a global variable to store the user data
@@ -176,7 +177,7 @@ app.post('/profileData', async (req, res) => {
         } else {
             res.status(404).json({ error: 'User not found' });
         }
-        console.log('Profile data fetched:', userData.email);
+        //console.log('Profile data fetched:', userData.email);
     } catch (error) {
         console.error('Error fetching profile data:', error);
         res.status(500).json({ error: 'Error fetching profile data' });
@@ -419,12 +420,8 @@ app.post('/addHistory', async (req, res) => {
         // Get the Firestore document ID of the first matched location
         const locationDocId = locationSnapshot.docs[0].id;
 
-        // Check if the location is already in history (comparing Firestore document IDs, not the `id` field)
-        if (history.some(item => item.locationId === locationDocId)) {
-            return res.status(400).json({ error: 'Location already in history' });
-        }
-
         // Add the Firestore document ID of the location and the start date to the history array
+        // Allow multiple entries for the same location with different start dates
         history.push({ locationId: locationDocId, startDate });
 
         // Update the user's history array in Firestore
@@ -557,6 +554,213 @@ app.post('/removeHistory', async (req, res) => {
         res.status(500).json({ error: 'Error removing location from history' });
     }
 });
+// ------------------------------- get all interests --------------------------------
+app.get('/interests', async (req, res) => {
+    try {
+        const snapshot = await getDocs(InterestCollection);
+        const interests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.send(interests);
+    } catch (error) {
+        console.error('Error fetching interests:', error);
+        res.status(500).json({ error: 'Error fetching interests' });
+    }
+});
+
+//------------------------------- change photo -----------------------------------
+app.post('/changePhoto', async (req, res) => {
+    const {avatarURL } = req.body; // Certifique-se de enviar o email e o avatarURL no body da requisição.
+    const email = req.session.user?.email || userData.email;
+    if (!email || !avatarURL) {
+        return res.status(400).json({ error: 'Email and avatar URL are required' });
+    }
+
+    try {
+        // Busque o documento do usuário no Firestore com base no email
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Pegue a referência do primeiro documento encontrado (usuário)
+        const userDocRef = querySnapshot.docs[0].ref;
+
+        // Atualize o campo avatarURL no documento do usuário
+        await updateDoc(userDocRef, { avatarURL });
+
+        res.status(200).json({ message: 'Photo updated successfully' });
+        console.log('User photo updated for:', email);
+    } catch (error) {
+        console.error('Error updating photo:', error);
+        res.status(500).json({ error: 'Error updating photo' });
+    }
+});
+
+//------------------------------------------------------- Gamification Functions ------------------------------------------------------------
+//------------------------------- add points to user --------------------------------
+app.post('/addPoints', async (req, res) => {
+    const { points } = req.body;
+    const email = req.session.user?.email || userData.email;
+
+    if (!email || !points) {
+        return res.status(400).json({ error: 'Email and points are required' });
+    }
+
+    try {
+        // Get the user's document reference by querying the collection with the email
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email)); // Query to find user document
+        const querySnapshot = await getDocs(q);
+
+        // Check if the user document exists
+        if (querySnapshot.empty) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Get the first matching document reference
+        const userDocRef = querySnapshot.docs[0].ref;
+
+        // Get current points or initialize to 0
+        const userData = querySnapshot.docs[0].data();
+        const currentPoints = userData.points || 0;
+
+        // Add the points to the current total
+        const updatedPoints = currentPoints + points;
+
+        // Update the user's points in Firestore
+        await updateDoc(userDocRef, { points: updatedPoints });
+
+        res.status(200).json({ message: 'Points added successfully' });
+        console.log('Points added to user:', email);
+
+    } catch (error) {
+        console.error('Error adding points:', error);
+        res.status(500).json({ error: 'Error adding points' });
+    }
+});
+
+//------------------------------- get user points --------------------------------
+app.get('/points', async (req, res) => {
+    const email = req.session.user?.email || userData.email;
+
+    if (!email) {
+        return res.status(401).json({ error: 'User is not authenticated' });
+    }
+
+    try {
+        // Query the user's document using their email
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+
+        // Check if the user document exists
+        if (querySnapshot.empty) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Get user data and points
+        const userData = querySnapshot.docs[0].data();
+        const points = userData.points || 0;
+
+        res.status(200).json({ points });
+        //console.log('User points fetched:', points);
+    } catch (error) {
+        console.error('Error fetching points:', error);
+        res.status(500).json({ error: 'Error fetching points' });
+    }
+});
+//------------------------------- get user level --------------------------------
+// level 1 -> "Beginner" -> 0-299 points
+// level 2 -> "Intermediate" -> 300-999 points
+// level 3 -> "Advanced" -> 1000-2999 points
+// level 4 -> "Expert" -> 3000-9999 points
+// level 5 -> "Supreme Explorer" -> 10000+ points
+app.get('/level', async (req, res) => {
+    const email = req.session.user?.email || userData.email;
+
+    if (!email) {
+        return res.status(401).json({ error: 'User is not authenticated' });
+    }
+
+    try {
+        // Query the user's document using their email
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+
+        // Check if the user document exists
+        if (querySnapshot.empty) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Get user data and points
+        const userData = querySnapshot.docs[0].data();
+        const points = userData.points || 0;
+
+        // Determine the user's level based on the points
+        let level;
+        if (points < 300) {
+            level = 'Beginner';
+        } else if (points < 1000) {
+            level = 'Intermediate';
+        } else if (points < 3000) {
+            level = 'Advanced';
+        } else if (points < 10000) {
+            level = 'Expert';
+        } else {
+            level = 'Supreme Explorer';
+        }
+
+        res.status(200).json({ level });
+        //console.log('User level fetched:', level);
+    } catch (error) {
+        console.error('Error fetching level:', error);
+        res.status(500).json({ error: 'Error fetching level' });
+    }
+});
+
+//------------------------------- get user rank --------------------------------
+app.get('/rank', async (req, res) => {
+    const email = req.session.user?.email || userData.email;
+
+    if (!email) {
+        return res.status(401).json({ error: 'User is not authenticated' });
+    }
+
+    try {
+        // Query the user's document using their email
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+
+        // Check if the user document exists
+        if (querySnapshot.empty) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Get user data and points
+        const userData = querySnapshot.docs[0].data();
+        const points = userData.points || 0;
+
+        // Query all users and sort them by points in descending order
+        const allUsersSnapshot = await getDocs(usersRef);
+        const allUsers = allUsersSnapshot.docs.map(doc => doc.data());
+        allUsers.sort((a, b) => b.points - a.points);
+
+        // Find the user's rank by comparing the points
+        const userRank = allUsers.findIndex(user => user.email === email) + 1;
+
+        res.status(200).json({ rank: userRank });
+        //console.log('User rank fetched:', userRank);
+    } catch (error) {
+        console.error('Error fetching rank:', error);
+        res.status(500).json({ error: 'Error fetching rank' });
+    }
+});
+
+//------------------------------------------------------- Recomender system Functions ------------------------------------------------------------
 
 //------------------------------------------------------- CityCoucil Functions ------------------------------------------------------------
 //------------------------------- add location to table --------------------------------
@@ -582,6 +786,29 @@ app.post('/addLocations', async (req, res) => {
         res.status(500).json({ message: 'Failed to add markers to the walkways collection.', error: error.message });
     }
 });
+//------------------------------- add geojson to specific walkway table --------------------------------
+app.post('/addGeojson', async (req, res) => {
+    const { walkwayId, geojson } = req.body;
+
+    if (!walkwayId || !geojson) {
+        return res.status(400).json({ message: 'Walkway ID and GeoJSON data are required.' });
+    }
+
+    try {
+        // Add the GeoJSON data to the specified walkway document in Firestore
+        const walkwayDoc = doc(WalkwayCollection, "hbrpipZZMR55rSo2gs43");
+        console
+        await updateDoc(walkwayDoc, { geojson });
+
+        // Send a success response
+        res.status(200).json({ message: 'GeoJSON data added to walkway document.' });
+    } catch (error) {
+        console.error('Error adding GeoJSON to walkway document:', error);
+        res.status(500).json({ message: 'Failed to add GeoJSON to walkway document.', error: error.message });
+    }
+});
+
+
 
 //------------------------------- Server --------------------------------
 app.listen(8080, () => {

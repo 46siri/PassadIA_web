@@ -1,12 +1,11 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Axios from "axios";
-import { Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Button, Container, CssBaseline, Typography, Paper, ThemeProvider } from '@mui/material';
+import { Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions,Tabs, Tab, IconButton, Button, Container, CssBaseline, Typography, Paper, ThemeProvider } from '@mui/material';
 import { styled } from '@mui/system';
 import CloseIcon from '@mui/icons-material/Close';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
-import MapMarkerIcon from '@mui/icons-material/Place'; 
 import { APIProvider, AdvancedMarker, Map, Pin } from '@vis.gl/react-google-maps'; 
 import { useNavigate } from 'react-router-dom';
 
@@ -16,7 +15,7 @@ import walkway0 from './Theme/images/walkway_0.jpg';
 import walkway1 from './Theme/images/walkway_1.jpg';
 import walkway2 from './Theme/images/walkway_2.jpg';
 import walkway3 from './Theme/images/walkway_3.jpg';
-/* global google */
+
 
 // Styled components using MUI's new styled API
 const AppContainer = styled(Container)(({ theme }) => ({
@@ -51,22 +50,6 @@ const MoreMenuButton = styled(IconButton)(({ theme }) => ({
   top: 20,
 }));
 
-const MarkerStyled = styled(AdvancedMarker)(({ theme }) => ({
-  flexDirection: 'row', 
-    background: theme.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 150,
-    padding: 6,
-    elevation: 5
-}));
-
-const MarkerText = styled(Typography)(({ theme }) => ({
-  fontSize: 10,
-  color: theme.palette.primary,
-  fontWeight: 'bold',
-}));
-
 const WalkerBoard = ({ onLogout }) => {
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -74,11 +57,10 @@ const WalkerBoard = ({ onLogout }) => {
   const [markers, setMarkers] = useState([]);
   const [selectedMarker, setSelectedMarker] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
-  const mapRef = useRef(null);
-
-
-
+  const [difficulty, setDifficulty] = useState('Unknown');
+  const [tabIndex, setTabIndex] = useState(0);
   const navigate = useNavigate();
+
   const imageMap = {
     0: walkway0,
     1: walkway1,
@@ -86,7 +68,10 @@ const WalkerBoard = ({ onLogout }) => {
     3: walkway3,
   };
 
-  // Handle Logout
+   const handleTabChange = (event, newValue) => {
+    setTabIndex(newValue);
+  };
+
   const handleLogOut = async () => {
     setError(null);
     setSuccess(null);
@@ -149,6 +134,12 @@ const WalkerBoard = ({ onLogout }) => {
       if (response.status === 200) {
         setSuccess("Marked as favorite!");
         setIsFavorite(true); // Mark as favorite after success
+        const points = 20;
+        // add points to the user
+        const responseP = await Axios.post("http://localhost:8080/addPoints", { points}, { withCredentials: true });
+        if(responseP.status === 200){
+          setSuccess("Points added!");
+        }
       }
     } catch (error) {
       if (error.response && error.response.status === 400) {
@@ -159,35 +150,36 @@ const WalkerBoard = ({ onLogout }) => {
     }
   };
 
-  const handleStartWalkClick = async () => {
+  /*const handleStartWalkClick = async () => {
     setError(null);
     setSuccess(null);
 
     try {
-        // Send the location ID and start date to the backend
-        const response = await Axios.post(
-            "http://localhost:8080/addHistory",
-            { 
-                locationId: selectedMarker.id, // Ensure selectedMarker contains the correct location ID
-                startDate: new Date().toISOString() // Send the current date in ISO format
-            },
-            { withCredentials: true } // Allow the session to be sent with the request
-        );
-
-        if (response.status === 200) {
+        const points = difficulty === 'Easy' ? 50 : difficulty === 'Medium' ? 100 : difficulty === 'Hard' ? 200 : 0;
+        // add points to the user
+        const responseP = await Axios.post("http://localhost:8080/addPoints", { points}, { withCredentials: true });
+        
+        if (responseP.status === 200) {
             setSuccess("Walk started!"); // Display success message
+            // Send the location ID and start date to the backend
+            const response = await Axios.post(
+              "http://localhost:8080/addHistory",
+              { 
+                  locationId: selectedMarker.id, // Ensure selectedMarker contains the correct location ID
+                  startDate: new Date().toISOString() // Send the current date in ISO format
+              },
+              { withCredentials: true } // Allow the session to be sent with the request
+          );
         }
     } catch (error) {
         setError("Failed to start walk: " + (error.response?.data?.error || error.message)); // Show a detailed error message
     }
+};*/
+
+const handleStartWalkClick = async () => {
+  // navigate to the start walk page
+  navigate('/StartWalk');
 };
-
-
-
-  const mapStyles = {
-    height: '100%',
-    width: '100%',
-  };
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -208,6 +200,24 @@ const WalkerBoard = ({ onLogout }) => {
     setSelectedMarker(marker);
   }, []); 
   
+  useEffect(() => {
+    if (selectedMarker) {
+      // Calculate difficulty when the selected marker changes
+      const calculateDifficulty = (difficultyLevel) => {
+        if (difficultyLevel === 1) {
+          return 'Easy';
+        } else if (difficultyLevel === 2) {
+          return 'Medium';
+        } else if (difficultyLevel === 3) {
+          return 'Hard';
+        } else {
+          return 'Unknown';
+        }
+      };
+  
+      setDifficulty(calculateDifficulty(selectedMarker.difficulty));
+    }
+  }, [selectedMarker]);
   
   useEffect(() => {
     const fetchMarkers = async () => {
@@ -305,64 +315,56 @@ const WalkerBoard = ({ onLogout }) => {
           </APIProvider>
         </MapContainer>
  
-        <Dialog
-          open={selectedMarker !== null}
-          onClose={handleCloseDialog}
-          aria-labelledby="marker-details-title"
-          fullWidth
-        >
-          <DialogTitle id="marker-details-title">
+        <Dialog open={selectedMarker !== null} onClose={handleCloseDialog} fullWidth>
+          <DialogTitle>
             {selectedMarker?.name}
             <IconButton aria-label="close" onClick={handleCloseDialog}>
               <CloseIcon />
             </IconButton>
-          </DialogTitle >
-          <DialogContent dividers>
-            {selectedMarker?.primaryImage && (
-              <img 
-                src={imageMap[selectedMarker.id]} 
-                alt={selectedMarker.name} 
-                style={{ maxWidth: '100%', marginBottom: '20px' }} 
-              />
-            )}
-            <Typography gutterBottom>
-              District: {selectedMarker?.district}
-            </Typography>
-            <Typography gutterBottom>
-              Region: {selectedMarker?.region}
-            </Typography>
-            <Typography gutterBottom>
-              Description: {selectedMarker?.description}
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-          <div>
-            {!isFavorite ? (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<FavoriteIcon />}
-                onClick={handleFavoriteClick}
-              >
-                Mark as Favorite
-              </Button>
-            ) : (
-              <Button variant="contained" disabled>
-                This location is already marked as favorite!
-              </Button>
-            )}
+          </DialogTitle>
 
-            {error && <div style={{ color: "red" }}>{error}</div>}
-            {success && <div style={{ color: "green" }}>{success}</div>}
-          </div>
-          <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<DirectionsWalkIcon />}
-              onClick={handleStartWalkClick}
-          >
+          <Tabs value={tabIndex} onChange={handleTabChange}>
+            <Tab label="Overview" />
+            <Tab label="Walkway" />
+            <Tab label="Services" />
+          </Tabs>
+
+          <DialogContent dividers>
+            {tabIndex === 0 && (
+              <>
+                <img src={imageMap[selectedMarker?.id]} alt={selectedMarker?.name} style={{ maxWidth: '100%', marginBottom: '20px' }} />
+                <Typography gutterBottom color="primary"><strong>District:</strong> {selectedMarker?.district}</Typography>
+                <Typography gutterBottom color="primary"><strong>Region:</strong> {selectedMarker?.region}</Typography>
+                <Typography gutterBottom color="secondary"><strong>Difficulty:</strong> {difficulty}</Typography>
+                <Typography gutterBottom><strong>Description:</strong> {selectedMarker?.description}</Typography>
+              </>
+            )}
+            {tabIndex === 1 && (
+              <Typography>Walkway details and path visualization can go here.</Typography>
+            )}
+            {tabIndex === 2 && (
+              <Typography>List of services offered along the walkway can be added here.</Typography>
+            )}
+          </DialogContent>
+
+          <DialogActions>
+            <div>
+              {!isFavorite ? (
+                <Button variant="contained" color="primary" startIcon={<FavoriteIcon />} onClick={handleFavoriteClick}>
+                  Mark as Favorite
+                </Button>
+              ) : (
+                <Button variant="contained" disabled>
+                  This location is already marked as favorite!
+                </Button>
+              )}
+
+              {error && <div style={{ color: "red" }}>{error}</div>}
+              {success && <div style={{ color: "green" }}>{success}</div>}
+            </div>
+            <Button variant="contained" color="secondary" startIcon={<DirectionsWalkIcon />} onClick={handleStartWalkClick}>
               Start Walk
-          </Button>
+            </Button>
           </DialogActions>
         </Dialog>
         <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>

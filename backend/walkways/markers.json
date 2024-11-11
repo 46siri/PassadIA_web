@@ -1,0 +1,31 @@
+[
+    {    
+        "id": 4,
+        "name": "Ecovia do Vez - Arcos de Valdevez",
+        "district": "Viana do Castelo",
+        "region": "Arcos de Valdevez",
+        "description": "A Ecovia do Vez é um percurso pedestre e de bicicleta que liga Arcos de Valdevez a Vilela. Esta ecovia acompanha o Rio Vez, proporcionando vistas espetaculares sobre o rio e a paisagem natural da região. Ao longo do percurso, podem ser observados diversos elementos naturais e históricos que fazem desta ecovia uma experiência única, combinando lazer, história, e natureza. A Ecovia do Vez é ideal para todas as idades e níveis de experiência, oferecendo tanto um passeio relaxante como a possibilidade de uma atividade física mais intensa.",
+        "coordinates": { 
+            "latitude": 41.84424,
+            "longitude": -8.40805
+        },
+        "trajetory": {
+            "round": false,
+            "start": {
+                "latitude": 41.84424,
+                "longitude": -8.40805
+            },
+            "end": {
+                "latitude": 41.85925,
+                "longitude": -8.42603
+            }
+        },
+        "specifics": {
+            "distance": "7.0 km",
+            "difficulty": 2,
+            "maxHeight": "160 m",
+            "minHeight": "50 m"
+        },
+        "primaryImage": "../Theme/images/walkway_4.jpg"
+    }
+]

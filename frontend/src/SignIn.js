@@ -55,13 +55,38 @@ const SignInModal = ({ onClose, openForgotPassModal }) => {
   const handleSignIn = async (e) => {
     e.preventDefault();
     try {
-      const response = await Axios.post("http://localhost:8080/signin", { email, password });
-      setUser(response.data);
-      navigate('/WalkerBoard'); 
+        // Step 1: Sign in the user
+        const signInResponse = await Axios.post("http://localhost:8080/signin", { email, password });
+        console.log("Sign-in response:", signInResponse.data);
+
+        // Step 2: Set user session data
+        setUser(signInResponse.data.user);
+        console.log("User:", signInResponse.data.user);
+
+        // Step 3: Fetch user data, including role
+        const userDataResponse = await Axios.get("http://localhost:8080/user", {
+            params: { email: signInResponse.data.user.email }
+        });
+        
+        let role = userDataResponse.data.role;
+        console.log("Role:", role);
+        if(role === "Walker") {
+            navigate('/WalkerBoard');
+        } else if (role === "Staff"){
+            navigate('/CityCouncilBoard');
+        } else if (role === "Merchant"){
+            navigate('/MerchantBoard');
+        } else {
+            console.error("Invalid role:", role);
+            setError("Invalid role: " + role);
+        }     
     } catch (error) {
-      setError('Sign in failed: ' + error.message);
+        console.error('Sign in failed:', error);
+        setError('Sign in failed: ' + (error.response ? error.response.data.message : error.message));
     }
-  };
+};
+
+
 
   const handleGoogleSignIn = async () => {
     try {

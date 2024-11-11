@@ -11,6 +11,8 @@ import MerchantBoard from './MerchantBoard';
 import Favorites from './Favorites';
 import History from './History';
 import StartWalk from './StartWalk';
+import CityCouncilProfile from './CityCouncilProfile';
+import MyWalkways from './MyWalkways';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -26,6 +28,8 @@ root.render(
         <Route path="/History" element={<History />} />
         <Route path="/WalkerBoard" element={<WalkerBoard />} />
         <Route path="/CityCouncilBoard" element={<CityCouncilBoard />} />
+        <Route path="/CityCouncilProfile" element={<CityCouncilProfile />} />
+        <Route path="/MyWalkways" element={<MyWalkways />} />
         <Route path="/MerchantBoard" element={<MerchantBoard />} />
         <Route path="/StartWalk" element={<StartWalk />} />
       </Routes>

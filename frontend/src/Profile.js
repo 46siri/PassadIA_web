@@ -155,16 +155,7 @@ const ProfileModal = ({ onLogout }) => {
     };
 
     const handleLogoClick = () => {
-        if (role === 'Walker') {
-            navigate('/WalkerBoard');
-        } else if (role === 'Merchant') {
-            navigate('/MerchantBoard');
-        } else if (role === 'City ​​Council') {
-            navigate('/City​CouncilBoard');
-        } else {
-            console.log('Role not found');
-            navigate('/App');
-        }
+        navigate('/WalkerBoard');
 
     };
 

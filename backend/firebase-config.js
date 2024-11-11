@@ -1,6 +1,7 @@
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection } = require('firebase/firestore');
 const { getAuth } = require('firebase/auth'); // Import Firebase Authentication
+const { getStorage } = require('firebase/storage'); // Import Firebase Storage
 
 const firebaseConfig = {
   apiKey: "AIzaSyDGWw7a3DMovfffSzo3V09JUfm_da4jOnM",
@@ -16,13 +17,14 @@ const firebaseConfig = {
 // Initialize Firebase app
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore and Authentication
+// Initialize Firestore, Authentication, and Storage
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app); // Initialize Firebase Storage
 
-// Reference to the 'users' collection in Firestore
+// Reference to the Firestore collections
 const UserCollection = collection(db, 'users');
 const WalkwayCollection = collection(db, 'walkways');
 const InterestCollection = collection(db, 'interests');
 
-module.exports = { db, UserCollection, auth, WalkwayCollection, InterestCollection }; 
+module.exports = { db, auth, storage, UserCollection, WalkwayCollection, InterestCollection };

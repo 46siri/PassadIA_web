@@ -36,9 +36,8 @@ const Logo = styled('img')(({ theme }) => ({
 }));
 
 const MapContainer = styled(Paper)(({ theme }) => ({
-  height: '600px',
+  height: '500px',
   width: '100%',
-  marginTop: theme.spacing(4),
 }));
 
 const NewWalkwayContainer = styled(Paper)(({ theme }) => ({
@@ -207,7 +206,7 @@ const CityCouncilBoard = ({ onLogout }) => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AppContainer>
-        <APIProvider apiKey={'AIzaSyC8Sj12_rv73anPhi2oCeqsVVjUkfFJ4-U'}>
+        <APIProvider apiKey={'AIzaSyDwGfxyjM21tprpmkBXNI6HGIuwzvLsBgo'}>
           <Logo src={logo} alt="logo" onClick={handleLogoClick} />
           <MoreMenuButton aria-label="more" onClick={handleClick}>
             <MoreVertIcon />

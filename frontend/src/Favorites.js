@@ -12,6 +12,7 @@ import walkway0 from './Theme/images/walkway_0.jpg';
 import walkway1 from './Theme/images/walkway_1.jpg';
 import walkway2 from './Theme/images/walkway_2.jpg';
 import walkway3 from './Theme/images/walkway_3.jpg';
+import walkway4 from './Theme/images/walkway_4.jpg';
 
 // Styled components using MUI's new styled API
 export const AppContainer = styled(Container)(({ theme }) => ({
@@ -111,6 +112,7 @@ const Favorites = ({ onLogout }) => {
         1: walkway1,
         2: walkway2,
         3: walkway3,
+        4: walkway4,
       };
     
     // Handle Logout

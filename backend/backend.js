@@ -6,7 +6,7 @@ const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
 const { UserCollection, auth, db, WalkwayCollection, InterestCollection } = require('./firebase-config');
-const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = require('firebase/auth');
+const { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } = require('firebase/auth');
 const { getStorage } = require("firebase/storage");
 const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion} = require('firebase/firestore');
 const { c, u } = require('tar');
@@ -58,19 +58,19 @@ app.post("/create", async (req, res) => {
         res.status(500).send("Error adding user");
     }
 });
+//----------------------------- Password email reset -------------------------------
+app.post('/forgotPassword', async (req, res) => {
+    const { email } = req.body;
 
-//----------------------------- Password Reset -------------------------------
-app.post("/resetPassword", async (req, res) => {
-    const { email, password, id } = req.body;
     try {
-        const userDocRef = doc(UserCollection, id);
-        await updateDoc(userDocRef, { email, password });
-        res.send("Password updated");
+        await sendPasswordResetEmail(auth, email);
+        res.status(200).json({ message: 'Password reset email sent successfully.' });
     } catch (error) {
-        console.error("Error updating password:", error);
-        res.status(500).send("Error updating password");
+        console.error('Error sending password reset email:', error);
+        res.status(500).json({ error: 'Failed to send password reset email.' });
     }
 });
+
 
 //------------------------------- Google Auth --------------------------------
 passport.use(new GoogleStrategy({
@@ -1296,6 +1296,146 @@ app.get('/topLikedWalkways', async (req, res) => {
         res.status(500).json({ error: 'Error fetching top liked walkways' });
     }
 });
+
+//------------------------------- Recommender Systems ---------------------------------
+
+// Função para calcular a Similaridade de Jaccard
+function jaccardSimilarity(setA, setB) {
+    const intersection = setA.filter(value => setB.includes(value)).length;
+    const union = new Set([...setA, ...setB]).size;
+    return union === 0 ? 0 : intersection / union;
+}
+
+// Função para encontrar utilizadores semelhantes
+async function findSimilarUsers(email, minSimilarity = 0.3) {
+    const usersSnapshot = await getDocs(UserCollection);
+    const targetUserDoc = usersSnapshot.docs.find(doc => doc.data().email === email);
+
+    if (!targetUserDoc) {
+        throw new Error("Utilizador não encontrado");
+    }
+
+    const targetUser = targetUserDoc.data();
+    const targetInterests = targetUser.interests || [];
+
+    const similarUsers = [];
+
+    usersSnapshot.forEach(userDoc => {
+        const userData = userDoc.data();
+        if (userData.email !== email) {
+            const interests = userData.interests || [];
+            const similarity = jaccardSimilarity(targetInterests, interests);
+
+            if (similarity >= minSimilarity) {
+                similarUsers.push({ email: userData.email, similarity, interests });
+            }
+        }
+    });
+
+    // Ordena os utilizadores pela similaridade em ordem decrescente
+    similarUsers.sort((a, b) => b.similarity - a.similarity);
+
+    return similarUsers;
+}
+
+// Função para recomendar walkways com base em utilizadores semelhantes
+async function recommendWalkways(email, minSimilarity = 0.3) {
+    console.log(`Recommending walkways for user with email: ${email} and minimum similarity: ${minSimilarity}`);
+    const similarUsers = await findSimilarUsers(email, minSimilarity);
+    console.log(`Similar users found:`, similarUsers);
+
+    const usersSnapshot = await getDocs(UserCollection);
+    const targetUserDoc = usersSnapshot.docs.find(doc => doc.data().email === email);
+
+    if (!targetUserDoc) {
+        console.error("User not found");
+        throw new Error("User not found");
+    }
+
+    const targetUser = targetUserDoc.data();
+    const targetWalkways = new Set((targetUser.history || []).map(entry => entry.walkwayId));
+    const targetFavorites = new Set(targetUser.favorites.map(fav => fav.toString()));
+    console.log(`Target user's history and favorites loaded.`);
+
+    const recommendedWalkways = new Set();
+
+    similarUsers.forEach(user => {
+        const userDoc = usersSnapshot.docs.find(doc => doc.data().email === user.email);
+        const userData = userDoc.data();
+        const userWalkways = userData.history || [];
+        const userFavorites = userData.favorites || [];
+
+        userWalkways.forEach(walkway => {
+            if (!targetWalkways.has(walkway.walkwayId)) {
+                console.log(`Adding recommended walkway ${walkway.walkwayId}`);
+                recommendedWalkways.add(walkway.walkwayId);
+            }
+        });
+        userFavorites.forEach(fav => {
+            const favId = fav.toString(); // Ensure the ID is consistent
+            if (!targetWalkways.has(favId) && !targetFavorites.has(favId)) {
+                console.log(`Adding recommended favorite ${favId}`);
+                recommendedWalkways.add(favId);
+            }
+        });
+    });
+
+    console.log(`Recommended walkways:`, Array.from(recommendedWalkways));
+
+    // Fetch all walkways in one call
+    const walkwayCollectionRef = collection(db, 'walkways');
+    const walkwaysSnapshot = await getDocs(walkwayCollectionRef);
+    //console.log(`All walkways in collection:`, walkwaysSnapshot.docs.map(doc => ({ id: doc.id, walkwayId: doc.data().id })));
+
+    // find recommended walkways by comparing each document's walkwayId to recommendedWalkways
+    const walkways = walkwaysSnapshot.docs
+        .filter(doc => recommendedWalkways.has(doc.id)) 
+        .map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    //console.log(`Recommended walkways found:`, walkways);
+
+    return walkways;
+}
+
+
+// Endpoint para recomendar walkways
+app.get('/recommendWalkways', async (req, res) => {
+    const email = req.session.user?.email || userData.email;
+    const minSimilarity = req.query.minSimilarity ? parseFloat(req.query.minSimilarity) : 0.3;
+
+    if (!email) {
+        return res.status(401).json({ error: 'User is not authenticated' });
+    }
+
+    try {
+        const recommendations = await recommendWalkways(email, minSimilarity);
+        res.status(200).json({ recommendations });
+    } catch (error) {
+        console.error('Error recommending walkways:', error);
+        res.status(500).json({ error: 'Error recommending walkways' });
+    }
+});
+
+
+// Rota para testar a função de encontrar utilizadores semelhantes
+app.get('/similarUsers', async (req, res) => {
+    const { email, minSimilarity } = req.query;
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email é obrigatório para encontrar utilizadores semelhantes.' });
+    }
+
+    try {
+        // Chama a função findSimilarUsers com o email e o minSimilarity (se fornecido)
+        const similarUsers = await findSimilarUsers(email, parseFloat(minSimilarity) || 0.3);
+
+        res.status(200).json({ similarUsers });
+    } catch (error) {
+        console.error('Erro ao encontrar utilizadores semelhantes:', error);
+        res.status(500).json({ error: 'Erro ao encontrar utilizadores semelhantes.' });
+    }
+});
+
 
 
 //------------------------------- Server --------------------------------

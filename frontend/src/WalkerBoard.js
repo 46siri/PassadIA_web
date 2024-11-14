@@ -28,7 +28,7 @@ const AppContainer = styled(Container)(({ theme }) => ({
 
 const Logo = styled('img')(({ theme }) => ({
   position: 'absolute',
-  top: theme.spacing(2),
+  top: theme.spacing(4),
   left: theme.spacing(50),
   width: '200px',
   height: 'auto',
@@ -36,9 +36,11 @@ const Logo = styled('img')(({ theme }) => ({
 }));
 
 const MapContainer = styled(Paper)(({ theme }) => ({
-  height: '600px',
+  height: '500px',
   width: '100%',
-  marginTop: theme.spacing(4),
+  display: 'flex',
+  overflowX: 'auto',
+  marginTop: theme.spacing(80),
 }));
 
 const LogoutButton = styled(Button)({
@@ -56,10 +58,13 @@ const MoreMenuButton = styled(IconButton)({
 const TopWalkwaysContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   overflowX: 'auto',
-  padding: theme.spacing(2),
-  marginTop: theme.spacing(4),
-}));
 
+}));
+const RecommendedWalkwaysContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  overflowX: 'auto',
+
+}));
 // Add 'backgroundImage' as a prop to WalkwayBox
 const WalkwayBox = styled(Paper)(({ theme, backgroundImage }) => ({
   minWidth: '200px',
@@ -95,6 +100,7 @@ const WalkerBoard = ({ onLogout }) => {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [geoJsonLoaded, setGeoJsonLoaded] = useState(false); 
   const [topWalkways, setTopWalkways] = useState([]);
+  const [recommendedWalkways, setRecommendedWalkways] = useState([]);
   const [walkwayInterests, setWalkwayInterests] = useState([]);
   const mapRef = useRef(null);
   const navigate = useNavigate();
@@ -128,6 +134,16 @@ const WalkerBoard = ({ onLogout }) => {
       setTopWalkways(response.data.topWalkways);
     } catch (error) {
       console.error("Error fetching top walkways:", error);
+    }
+  };
+
+  const fetchRecommendedWalkways = async () => {
+    try {
+      const response = await Axios.get("http://localhost:8080/recommendWalkways");
+      setRecommendedWalkways(response.data.recommendations);
+      console.log("Recommended Walkways:", response.data.recommendations);
+    } catch (error) {
+      console.error("Error fetching recommended walkways:", error);
     }
   };
 
@@ -170,6 +186,9 @@ const WalkerBoard = ({ onLogout }) => {
   const handleMarkerClick = useCallback((marker) => setSelectedMarker(marker), []);
   useEffect(() => {
     fetchTopWalkways();
+  }, []);
+  useEffect(() => {
+    fetchRecommendedWalkways();
   }, []);
   const handleTopWalkwayClick = (walkwayId) => {
     const marker = markers.find((marker) => marker.id === walkwayId);
@@ -370,7 +389,7 @@ const WalkerBoard = ({ onLogout }) => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AppContainer>
-        <APIProvider apiKey={'AIzaSyC8Sj12_rv73anPhi2oCeqsVVjUkfFJ4-U'}>
+        <APIProvider apiKey={'AIzaSyDwGfxyjM21tprpmkBXNI6HGIuwzvLsBgo'}>
           <Logo src={logo} alt="logo" onClick={handleLogoClick} />
           <MoreMenuButton aria-label="more" onClick={handleClick}>
             <MoreVertIcon />
@@ -477,6 +496,37 @@ const WalkerBoard = ({ onLogout }) => {
               </WalkwayBox>
             ))}
           </TopWalkwaysContainer>
+          <Typography variant="h6" color="primary" style={{ marginTop: theme.spacing(10), textAlign: 'left' }}>
+            Walkways that may interest you
+          </Typography>
+          <RecommendedWalkwaysContainer style={{ justifyContent: 'flex-start' }}>
+            {Array.isArray(recommendedWalkways) && recommendedWalkways.length > 0 ? (
+              recommendedWalkways.map((walkway, index) => (
+                <WalkwayBox
+                  key={walkway.id}
+                  onClick={() => handleTopWalkwayClick(walkway.id)}
+                  style={{ width: '300px', height: '180px' }} // Fixed box size
+                >
+                  <img 
+                    src={imageMap[walkway.id] || 'default_image.jpg'} 
+                    alt={walkway.name} 
+                    style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }}
+                  />
+                  <Typography variant="subtitle1" style={{ fontWeight: 'bold', marginTop: theme.spacing(1), color: '#333' }}>
+                    {walkway.name}
+                  </Typography>
+                  <Typography variant="body2" style={{ color: '#666' }}>
+                    Distance: {walkway.specifics.distance} | Difficulty: {walkway.specifics.difficulty}
+                  </Typography>
+                </WalkwayBox>
+              ))
+            ) : (
+              <Typography variant="body2" style={{ color: '#666', padding: theme.spacing(2) }}>
+                No recommended walkways available.
+              </Typography>
+            )}
+          </RecommendedWalkwaysContainer>
+
 
           <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>Logout</LogoutButton>
         </APIProvider>

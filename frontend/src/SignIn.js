@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import theme from './Theme/theme';
 import GoogleLogo from './Theme/google-logo.svg';
 import logo from './Theme/images/logo.png';
-
+import ForgotPassModal from './ForgotPass'; 
 
 const ModalStyled = styled('div')(({ theme }) => ({
   ...theme.overrides.modal,
@@ -45,11 +45,12 @@ const GoogleButton = styled(Button)({
 
 
 
-const SignInModal = ({ onClose, openForgotPassModal }) => {
+const SignInModal = ({ onClose }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
+  const [forgotPassOpen, setForgotPassOpen] = useState(false); 
   const navigate = useNavigate();
 
   const handleSignIn = async (e) => {
@@ -96,8 +97,14 @@ const SignInModal = ({ onClose, openForgotPassModal }) => {
       setError('Google sign-in failed: ' + error.message);
     }
   };
+  const openForgotPassModal = () => {
+    setForgotPassOpen(true);
+  };
 
- 
+  const closeForgotPassModal = () => {
+    setForgotPassOpen(false);
+  };
+
 
   return (
     <ThemeProvider theme={theme}>
@@ -161,6 +168,7 @@ const SignInModal = ({ onClose, openForgotPassModal }) => {
           message={error}
         />
       )}
+      {forgotPassOpen && <ForgotPassModal onClose={closeForgotPassModal} />}
     </ThemeProvider>
   );
 };

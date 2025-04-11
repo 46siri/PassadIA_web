@@ -55,6 +55,15 @@ const SignUpModal = ({ onClose }) => {
     const [userId, setUserId] = useState('');
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
+
+    const [institutionName, setInstitutionName] = useState('');
+    const [positionType, setPositionType] = useState('');
+    const [location, setLocation] = useState('');
+    const [registrationDate, setRegistrationDate] = useState(() => {
+      const today = new Date();
+      return today.toISOString().split('T')[0]; // formato "YYYY-MM-DD"
+    });
+        
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null); // Add success state
     const [open, setOpen] = useState(false);
@@ -69,29 +78,52 @@ const SignUpModal = ({ onClose }) => {
       setUserId('');
       setName('');
       setRole('');
+      setInstitutionName('');
+      setPositionType('');
+      setLocation('');
+      setRegistrationDate('');
     };
 
+
     const handleSignUp = async (e) => {
-        e.preventDefault();
-        setError(null); // Clear previous errors
-        setSuccess(null); // Clear previous success
-
-        try {
-          const response = await Axios.post("http://localhost:8080/signup", { 
-            email, password, name, birthdate, userId, role 
+      e.preventDefault();
+      setError(null);
+      setSuccess(null);
+    
+      try {
+        if (role === "Staff") {
+          // Envia pedido de registo para aprovação
+          const response = await Axios.post("http://localhost:8080/signup-pending", {
+            email,
+            password,
+            userId,
+            institutionName,
+            role,
+            registrationDate,
+            positionType,
+            location,
+            status: "pending"
+          });          
+    
+          console.log('City Council registration pending approval:', response.data);
+          setSuccess("Your request has been submitted and is awaiting admin approval.");
+        } else {
+          // Registo normal
+          const response = await Axios.post("http://localhost:8080/signup", {
+            email, password, name, birthdate, userId, role
           });
-          console.log('SignUp successful:', response.data);
-
-          // Display success message
-          setSuccess('Sign up successful!');
-
-          // Optionally, reset form fields
-          resetForm();
-
-        } catch (error) {
-          setError('Sign up failed: ' + error.message);
+    
+          console.log('Sign-up successful:', response.data);
+          setSuccess("Registration successful!");
         }
-      };
+    
+        resetForm();
+    
+      } catch (error) {
+        setError('Registration failed: ' + error.message);
+      }
+    };
+    
 
   return (
     <ThemeProvider theme={theme}>
@@ -103,6 +135,21 @@ const SignUpModal = ({ onClose }) => {
             Sign Up
           </Title>
           <FormGroup onSubmit={handleSignUp}>
+          <FormControl required variant="outlined" sx={{ minWidth: 310, maxWidth: 600}}>
+                <InputLabel id="role">Role</InputLabel>
+                <SelectStyled
+                    value={role}
+                    open={open}
+                    onClose={handleClose}
+                    onOpen={handleOpen}
+                    onChange={(e) => setRole(e.target.value)}
+                    label="Role"
+                    required
+                >
+                    <MenuItem value="Staff">City ​​Council</MenuItem>
+                    <MenuItem value="Walker">Walker</MenuItem>
+                </SelectStyled>
+            </FormControl>
             <TextF
               type="email"
               id="email"
@@ -123,21 +170,6 @@ const SignUpModal = ({ onClose }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <TextF 
-                type="date"
-                id="birthdate"
-                label="Birthdate"
-                variant="outlined"
-                fullWidth
-                required
-                slotProps={{
-                  inputLabel: {
-                    shrink: true,  
-                  },
-                }}
-                value={birthdate}
-                onChange={(e) => setBirthdate(e.target.value)}
-                />
             <TextF
                 type="text"
                 id="userId"
@@ -147,7 +179,9 @@ const SignUpModal = ({ onClose }) => {
                 required
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
-                />
+            />
+            {role === "Walker" && (
+              <>
             <TextF
                 type="text"
                 id="name"
@@ -157,23 +191,65 @@ const SignUpModal = ({ onClose }) => {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                />
-            <FormControl required variant="outlined" sx={{ minWidth: 310, maxWidth: 600}}>
-                <InputLabel id="role">Role</InputLabel>
-                <SelectStyled
-                    value={role}
-                    open={open}
-                    onClose={handleClose}
-                    onOpen={handleOpen}
-                    onChange={(e) => setRole(e.target.value)}
-                    label="Role"
-                    required
-                >
-                    <MenuItem value="Staff">City ​​Council</MenuItem>
-                    <MenuItem value="Walker">Walker</MenuItem>
-                    <MenuItem value="Merchant">Merchant</MenuItem>
-                </SelectStyled>
-            </FormControl>
+            />
+              <TextF 
+                type="date"
+                id="birthdate"
+                label="Birthdate"
+                variant="outlined"
+                fullWidth
+                required
+                InputLabel={{ shrink: true }} // Garante que o label fique visível
+                InputProps={{
+                  sx: {
+                    textAlign: 'right', // Alinha o texto à direita no campo
+                    '& input': {
+                      textAlign: 'right', // Alinha a data à direita
+                    }
+                  }
+                }}
+                value={birthdate}
+                onChange={(e) => setBirthdate(e.target.value)}
+              />
+            </>
+            
+          )}
+          {role === "Staff" && (
+            <>
+              <TextF
+                type="text"
+                id="institutionName"
+                label="Institution Name"
+                variant="outlined"
+                fullWidth
+                required
+                value={institutionName}
+                onChange={(e) => setInstitutionName(e.target.value)}
+              />
+              <TextF
+                type="text"
+                id="positionType"
+                label="Position (e.g. Câmara Municipal)"
+                variant="outlined"
+                fullWidth
+                required
+                value={positionType}
+                onChange={(e) => setPositionType(e.target.value)}
+              />
+              <TextF
+                type="text"
+                id="location"
+                label="Location"
+                variant="outlined"
+                fullWidth
+                required
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </>
+          )}
+
+            
             <StyledButton variant="contained" color="primary" type="submit">
               Sign Up
             </StyledButton>
@@ -202,6 +278,11 @@ const SignUpModal = ({ onClose }) => {
           onClose={() => setSuccess(null)}
           message={success}
         />
+      )}
+      {role === "Staff" && (
+        <Typography variant="caption" color="textSecondary">
+          This registration requires admin approval before you can log in.
+        </Typography>
       )}
     </ThemeProvider>
   );

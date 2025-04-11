@@ -18,11 +18,13 @@ import walkway4 from './Theme/images/walkway_4.jpg';
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff', // Alterado de #f5f5f5 para branco puro
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'column', // adiciona para alinhar conteúdo verticalmente
+    paddingTop: theme.spacing(4),
   }));
 
 export const Logo = styled('img')(({ theme }) => ({
@@ -234,7 +236,18 @@ const Favorites = ({ onLogout }) => {
                 History
                 </MenuItem>
             </Menu>
-            <Grid2 container spacing={2} style={{ marginTop: '120px' }} columns={16}>
+            <Typography
+                variant="h4"
+                sx={{
+                    marginTop: theme.spacing(70),
+                    marginBottom: theme.spacing(0.2),
+                    color: theme.palette.primary.main,
+                    textAlign: 'center',
+                }}
+                >
+                My Favorite Walkways
+            </Typography>
+            <Grid2 container spacing={2} style={{ marginTop: '60px' }} columns={16}>
                 {favoriteLocations && favoriteLocations.length > 0 ? (
                     favoriteLocations.map((location) => (
                         <Grid2 item xs={12} sm={6} md={4} key={location.id}>

@@ -7,27 +7,25 @@ import EditIcon from '@mui/icons-material/Edit';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import EmailIcon from '@mui/icons-material/Email';
 import WorkIcon from '@mui/icons-material/Work';
-import CakeIcon from '@mui/icons-material/Cake';
-import HeightIcon from '@mui/icons-material/Height';
-import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import InfoIcon from '@mui/icons-material/Info';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
+
 import { useNavigate } from 'react-router-dom';
 
 import theme from './Theme/theme';
 import logo from './Theme/images/baselogo.jpg';
-import WalkerBoard from "./WalkerBoard";
-import CityCouncilBoard from "./CityCouncilBoard";
 
-// Styled components using MUI's new styled API
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff', // Alterado de #f5f5f5 para branco puro
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'column', // adiciona para alinhar conteúdo verticalmente
+    paddingTop: theme.spacing(4),
   }));
 
 export const Logo = styled('img')(({ theme }) => ({
@@ -73,12 +71,16 @@ export const EditButton = styled(Button)(({ theme }) => ({
 
 export const CardStyled = styled(Card)(({ theme }) => ({
     marginBottom: theme.spacing(5),
-    marginLeft: theme.spacing(15),
+    marginLeft: 'auto',
+    marginRight: 'auto',
     padding: theme.spacing(5),
     backgroundColor: '#f9f9f9',
     boxShadow: '0px 3px 15px rgba(0, 0, 0, 0.1)',
     borderRadius: theme.spacing(1),
+    maxWidth: '800px',
+    textAlign: 'left',
 }));
+
 
 export const IconStyled = styled('span')(({ theme }) => ({
     verticalAlign: 'middle',
@@ -115,13 +117,12 @@ const CityCouncilProfile = ({ onLogout }) => {
     const [profileData, setProfileData] = useState(null);
     const [email, setEmail] = useState('');
     const [userId, setUserId] = useState('');
-    const [name, setName] = useState('');
     const [role, setRole] = useState('');
-    const [birthdate, setBirthdate] = useState('');
-    const [height, setHeight] = useState('');
-    const [weight, setWeight] = useState('');
-    const [interests, setInterests] = useState('');
-    const [bio, setBio] = useState('');
+    const [institutionName, setInstitutionName] = useState('');
+    const [registrationDate, setRegistrationDate] = useState('');
+    const [positionType, setPositionType] = useState('');
+    const [location, setLocation] = useState('');
+
     const [avatarURL, setAvatarURL] = useState('');
     const [error, setError] = useState('');
     const [isEditing, setIsEditing] = useState(false);
@@ -129,11 +130,7 @@ const CityCouncilProfile = ({ onLogout }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [success, setSuccess] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const [interestsList, setInterestsList] = useState([]); // List of interests fetched from backend
-    const [selectedInterests, setSelectedInterests] = useState([]); // List of selected interests
     const [showChangePhoto, setShowChangePhoto] = useState(false); 
-    const [points, setPoints] = useState(0);
-    const [level, setLevel] = useState([]);
 
     const navigate = useNavigate();
 
@@ -179,9 +176,12 @@ const CityCouncilProfile = ({ onLogout }) => {
                 const response = await Axios.post('http://localhost:8080/profileData', {}, { withCredentials: true });
                 setProfileData(response.data);
                 setEmail(response.data.email);
-                setName(response.data.name);
+                setInstitutionName(response.data.institutionName);
                 setRole(response.data.role);
-                setBirthdate(response.data.birthdate);
+                setRegistrationDate(response.data.registrationDate);
+                setPositionType(response.data.positionType);
+                setLocation(response.data.location);
+                setUserId(response.data.userId);
                 setAvatarURL(response.data.avatarURL);
             } catch (error) {
                 setError('Error fetching profile data. Please try again.');
@@ -199,11 +199,13 @@ const CityCouncilProfile = ({ onLogout }) => {
 
         try {
             const response = await Axios.post('http://localhost:8080/updateProfile', {
-                email,       
+                email,
                 userId,
-                name,        
-                role,        
-                birthdate,   
+                institutionName,
+                role,
+                registrationDate,
+                positionType,
+                location,      
             });
 
             if (response.status === 200) {
@@ -245,15 +247,6 @@ const CityCouncilProfile = ({ onLogout }) => {
             <CssBaseline />
             <AppContainer>
             <Logo src={logo} alt="logo" onClick={handleLogoClick} />
-            {/* Nível e Pontos */}
-            <LevelContainer>
-            <Typography variant="body1" style={{ marginTop: '10px' }}>
-                🏅 <strong>Level:</strong> {level.level}
-            </Typography>
-            <Typography variant="body1">
-                ⭐ <strong>Points:</strong> {points.points}
-            </Typography>
-            </LevelContainer>
             
             <MoreMenuButton
                 aria-label="more"
@@ -290,7 +283,7 @@ const CityCouncilProfile = ({ onLogout }) => {
             <Grid2>
                 {/* Avatar Section */}
                 <Grid2 item xs={12} sm={5} style={{ textAlign: 'center' }} marginBottom={10}>
-                <Typography variant="h4" gutterBottom>{name}</Typography>
+                <Typography variant="h4" gutterBottom>{institutionName}</Typography>
                     <label htmlFor="avatar-upload">
                         <AvatarStyled
                             src={avatarURL}
@@ -332,9 +325,11 @@ const CityCouncilProfile = ({ onLogout }) => {
                     <CardStyled>
                         {isEditing ? (
                             <>
-                                <FormField fullWidth label="Edit Name" value={name} onChange={(e) => setName(e.target.value)} />
+                                <FormField fullWidth label="Nome da Instituição" value={institutionName} onChange={(e) => setInstitutionName(e.target.value)} />
+                                <FormField fullWidth label="Data de Registo" value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} />
+                                <FormField fullWidth label="Cargo (CM/JF)" value={positionType} onChange={(e) => setPositionType(e.target.value)} />
+                                <FormField fullWidth label="Localidade" value={location} onChange={(e) => setLocation(e.target.value)} />
                                 <FormField fullWidth label="Edit ID" value={userId} onChange={(e) => setUserId(e.target.value)} />
-                                <FormField fullWidth label="Edit Birthdate" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} />
                                 <EditButtonRight variant="contained" color="primary" onClick={handleSaveProfile}>Save Profile</EditButtonRight>
                                 <EditButtonRight variant="contained" color="secondary" onClick={handleEditToggle}>Cancel</EditButtonRight>
                             </>
@@ -344,49 +339,31 @@ const CityCouncilProfile = ({ onLogout }) => {
                                     {/* Left Column */}
                                     <Grid2 item xs={12} sm={6}>
                                         <Typography variant="body1">
-                                            <AccountCircleIcon/> <strong>User Id:</strong> {userId}
+                                            <AccountCircleIcon/> <strong>Institution Id:</strong> {userId}
                                         </Typography>
                                         <Typography variant="body1">
                                             <EmailIcon /> <strong>Email:</strong> {email}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <CakeIcon /> <strong>Birthdate:</strong> {birthdate}
+                                            <CalendarMonthIcon /> <strong>Registration Date:</strong> {registrationDate}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <FitnessCenterIcon /> <strong>Weight (kg):</strong> {weight}
+                                            <LocationOnIcon /> <strong>Location:</strong> {location}
                                         </Typography>
-                                        <Typography variant="body1">
-                                            <InfoIcon /> <strong>Bio:</strong> {bio}
-                                        </Typography>
+
                                     </Grid2>
 
                                     {/* Right Column */}
                                     <Grid2 item xs={12} sm={6}>
                                         <Typography variant="body1">
-                                            <AccountCircleIcon /> <strong>Name:</strong> {name}
+                                            <AccountCircleIcon /> <strong>Name of Institution:</strong> {institutionName}
+                                        </Typography>
+                                        <Typography variant="body1">
+                                            <BusinessCenterIcon /> <strong>Position Type:</strong> {positionType}
                                         </Typography>
                                         <Typography variant="body1">
                                             <WorkIcon /> <strong>Role:</strong> {role}
                                         </Typography>
-                                        <Typography variant="body1">
-                                            <HeightIcon /> <strong>Height (cm):</strong> {height}
-                                        </Typography>
-                                        <Typography variant="body1">
-                                        <FavoriteIcon /> <strong>Interests:</strong></Typography>
-                                            {selectedInterests.length > 0 ? (
-                                                selectedInterests.map((interestId) => {
-                                                    const interest = interestsList.find((i) => i.id === interestId);
-                                                    return interest ? (
-                                                        <Typography key={interest.id}>
-                                                            {interest.name}
-                                                        </Typography>
-                                                    ) : null;
-                                                })
-                                            
-                                            ) : (
-                                                <Typography>No interests selected.</Typography>
-                                            )}
-                                        
                                     </Grid2>
                                 </Grid2>
                                 <EditButtonRight variant="contained" color="primary" startIcon={<EditIcon />} onClick={handleEditToggle}>

@@ -22,12 +22,15 @@ import WalkerBoard from "./WalkerBoard";
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff', // Alterado de #f5f5f5 para branco puro
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'column', // adiciona para alinhar conteúdo verticalmente
+    paddingTop: theme.spacing(4),
   }));
+  
 
 export const Logo = styled('img')(({ theme }) => ({
     position: 'absolute',

@@ -75,8 +75,9 @@ const SignInModal = ({ onClose }) => {
             navigate('/WalkerBoard');
         } else if (role === "Staff"){
             navigate('/CityCouncilBoard');
-        } else if (role === "Merchant"){
-            navigate('/MerchantBoard');
+        }
+        else if (role === 'admin') {
+          navigate('/AdminBoard');
         } else {
             console.error("Invalid role:", role);
             setError("Invalid role: " + role);

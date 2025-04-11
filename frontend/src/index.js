@@ -7,11 +7,10 @@ import SignUpModal from './SignUp';
 import WalkerBoard from './WalkerBoard';
 import ProfileModal from './Profile';
 import CityCouncilBoard from './CityCouncilBoard';
-import MerchantBoard from './MerchantBoard';
 import Favorites from './Favorites';
 import History from './History';
-import StartWalk from './StartWalk';
 import CityCouncilProfile from './CityCouncilProfile';
+import AdminBoard from './AdminBoard';
 import MyWalkways from './MyWalkways';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -29,9 +28,8 @@ root.render(
         <Route path="/WalkerBoard" element={<WalkerBoard />} />
         <Route path="/CityCouncilBoard" element={<CityCouncilBoard />} />
         <Route path="/CityCouncilProfile" element={<CityCouncilProfile />} />
+        <Route path="/AdminBoard" element={<AdminBoard />} />
         <Route path="/MyWalkways" element={<MyWalkways />} />
-        <Route path="/MerchantBoard" element={<MerchantBoard />} />
-        <Route path="/StartWalk" element={<StartWalk />} />
       </Routes>
     </Router>
   </React.StrictMode>

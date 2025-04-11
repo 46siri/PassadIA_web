@@ -13,15 +13,16 @@ import walkway1 from './Theme/images/walkway_1.jpg';
 import walkway2 from './Theme/images/walkway_2.jpg';
 import walkway3 from './Theme/images/walkway_3.jpg';
 
-// Styled components using MUI's new styled API
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff', // Alterado de #f5f5f5 para branco puro
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'column', // adiciona para alinhar conteúdo verticalmente
+    paddingTop: theme.spacing(4),
   }));
 
 export const Logo = styled('img')(({ theme }) => ({

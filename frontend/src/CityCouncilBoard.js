@@ -70,6 +70,7 @@ const CityCouncilBoard = ({ onLogout }) => {
   const [geoJsonLoaded, setGeoJsonLoaded] = useState(false); 
   const [geoJsonInputType, setGeoJsonInputType] = useState('text');
 
+  const [hasCenteredOnce, setHasCenteredOnce] = useState(false);
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -83,9 +84,8 @@ const CityCouncilBoard = ({ onLogout }) => {
     trajectory: { start: { latitude: 0, longitude: 0 }, end: { latitude: 0, longitude: 0 }, round: false }
   });
   const [showFormDialog, setShowFormDialog] = useState(false);
-  const mapRef = useRef(null);
   const navigate = useNavigate();
-
+  const mapRef = useRef(null);
   const imageMap = {
     0: walkway0,
     1: walkway1,
@@ -93,9 +93,9 @@ const CityCouncilBoard = ({ onLogout }) => {
     3: walkway3,
     4: walkway4,
   };
+  const dataLayerRef = useRef(null);
 
   const handleTabChange = (_, newValue) => setTabIndex(newValue);
-
   const handleLogOut = async () => {
     setError(null);
     setSuccess(null);
@@ -118,8 +118,11 @@ const CityCouncilBoard = ({ onLogout }) => {
     setGeojsonData(null);   // Clear GeoJSON data to ensure it reloads
     setSelectedMarker(null); // Clear the selected marker
   };
-  const handleMarkerClick = useCallback((marker) => setSelectedMarker(marker), []);
-
+  const handleMarkerClick = async (marker) => {
+    if (marker?.id === undefined && marker?.walkwayId === undefined) return;
+  
+    setSelectedMarker(marker);
+    };
   useEffect(() => {
     const fetchMarkers = async () => {
       try {
@@ -131,7 +134,27 @@ const CityCouncilBoard = ({ onLogout }) => {
     };
     fetchMarkers();
   }, []);
-
+  useEffect(() => {
+    if (selectedMarker?.id === undefined || selectedMarker?.id === null) return;
+    Axios.get(`http://localhost:8080/getGeojson`, { params: { walkwayId: selectedMarker.id } })
+        .then(({ data: { geojson } }) => {
+          geojson.features.forEach((feature) => {
+            if (feature.geometry.type === 'Point') {
+              const [lng, lat] = feature.geometry.coordinates;
+              feature.geometry.coordinates = [lat, lng];
+            } else if (feature.geometry.type === 'MultiLineString') {
+              feature.geometry.coordinates = feature.geometry.coordinates.map(line =>
+                line.map(([lng, lat]) => [lat, lng])
+              );
+            }
+          });
+          setGeojsonData(geojson);
+        })
+        .catch((error) => console.error('Error fetching GeoJSON:', error));
+    
+  }, [selectedMarker]);
+  
+  
   const handleFormChange = (event) => {
     const { name, value } = event.target;
     const keys = name.split('.');
@@ -201,6 +224,121 @@ const CityCouncilBoard = ({ onLogout }) => {
       setSuccess(null);
     }
   };
+  const transformedMarkers = markers
+  .filter(marker => typeof marker.id === 'number' && marker.coordinates)
+  .map(marker => ({
+    ...marker,
+    position: {
+      lat: marker.coordinates.latitude,
+      lng: marker.coordinates.longitude,
+    },
+    name: marker.name || 'Unknown Name',
+    description: marker.description || 'No description available',
+    image: marker.primaryImage || 'default_image.jpg',
+    distance: marker.specifics?.distance || 'Unknown Distance',
+    difficulty: marker.specifics?.difficulty || 'Unknown Difficulty',
+    region: marker.region || 'Unknown Region',
+    district: marker.district || 'Unknown District',
+  }));
+
+  const handleMapLoad = (mapInstance) => {
+    const googleMap = mapInstance.map || mapInstance.googleMap;
+    setIsMapLoaded(true);
+    mapRef.current = googleMap;
+  };
+
+  useEffect(() => {
+    if (!isMapLoaded || !mapRef.current || !geojsonData) return;
+  
+    try {
+      // Limpa o anterior se existir
+      if (dataLayerRef.current) {
+        dataLayerRef.current.setMap(null);
+      }
+  
+      const dataLayer = new window.google.maps.Data();
+      dataLayer.setMap(mapRef.current);
+      dataLayerRef.current = dataLayer;
+  
+      const validateAndTransformGeoJson = (geoJson) => {
+        geoJson.features.forEach((feature) => {
+          if (feature.geometry.type === 'Point') {
+            const [lng, lat] = feature.geometry.coordinates;
+            feature.geometry.coordinates = [lat, lng];
+          } else if (feature.geometry.type === 'MultiLineString') {
+            feature.geometry.coordinates = feature.geometry.coordinates.map((line) =>
+              line.map(([lng, lat]) => [lat, lng])
+            );
+          }
+        });
+        return geoJson;
+      };
+  
+      const validatedGeoJson = validateAndTransformGeoJson(
+        typeof geojsonData === 'string' ? JSON.parse(geojsonData) : geojsonData
+      );
+  
+      dataLayer.addGeoJson(validatedGeoJson);
+  
+      dataLayer.setStyle((feature) => {
+        const geometryType = feature.getGeometry().getType();
+        if (geometryType === 'LineString' || geometryType === 'MultiLineString') {
+          return { strokeColor: 'blue', strokeWeight: 3, clickable: false };
+        } else if (geometryType === 'Point') {
+          return {
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 6,
+              fillColor: 'red',
+              fillOpacity: 1,
+              strokeWeight: 2,
+              strokeColor: 'white',
+            },
+          };
+        }
+      });
+  
+      const bounds = new window.google.maps.LatLngBounds();
+      dataLayer.forEach((feature) => {
+        const geometry = feature.getGeometry();
+        if (geometry.getType() === 'Point') {
+          bounds.extend(geometry.get());
+        } else if (geometry.getType() === 'LineString' || geometry.getType() === 'MultiLineString') {
+          geometry.getArray().forEach(bounds.extend);
+        }
+      });
+  
+      if (!bounds.isEmpty()) {
+        mapRef.current.fitBounds(bounds);
+      }
+    } catch (error) {
+      console.error("Error processing GeoJSON:", error);
+    }
+  }, [geojsonData, isMapLoaded]);
+  
+
+  useEffect(() => {
+    if (selectedMarker) {
+      // Calculate difficulty when the selected marker changes
+      const calculateDifficulty = (difficultyLevel) => {
+        if (difficultyLevel === 1) {
+          return 'Easy';
+        } else if (difficultyLevel === 2) {
+          return 'Medium';
+        } else if (difficultyLevel === 3) {
+          return 'Hard';
+        } else {
+          return 'Unknown';
+        }
+      };
+  
+      setDifficulty(calculateDifficulty(selectedMarker.difficulty));
+    }
+  }, [selectedMarker]);
+  useEffect(() => {
+    setHasCenteredOnce(false); // Recentrar no próximo load
+  }, [selectedMarker]);
+  
 
   return (
     <ThemeProvider theme={theme}>
@@ -216,13 +354,14 @@ const CityCouncilBoard = ({ onLogout }) => {
             <MenuItem onClick={() => { handleClose(); navigate('/MyWalkways'); }}>My Walkways</MenuItem>
           </Menu>
           <MapContainer>
-            <Map
+          <Map
               defaultZoom={10}
               defaultCenter={{ lat: 41.5564, lng: -8.16415 }}
               mapId='5f6b01e0c09b0450'
               mapTypeId="terrain"
+              //onIdle={handleMapLoad}
             >
-              {markers.map((marker) => (
+              {transformedMarkers.map((marker) => (
                 <AdvancedMarker
                   key={marker.id}
                   position={marker.position}
@@ -251,9 +390,24 @@ const CityCouncilBoard = ({ onLogout }) => {
                   <Typography gutterBottom color="primary"><strong>District:</strong> {selectedMarker?.district}</Typography>
                   <Typography gutterBottom color="primary"><strong>Region:</strong> {selectedMarker?.region}</Typography>
                   <Typography gutterBottom color="secondary"><strong>Difficulty:</strong> {difficulty}</Typography>
+                  <Typography gutterBottom><strong>Distance:</strong> {selectedMarker?.distance}</Typography>
                   <Typography gutterBottom><strong>Description:</strong> {selectedMarker?.description}</Typography>
                 </>
               )}
+              {tabIndex === 1 && selectedMarker && (
+                <Map
+                  key={selectedMarker.id}
+                  defaultZoom={14}
+                  defaultCenter={{
+                    lat: selectedMarker?.coordinates?.latitude,
+                    lng: selectedMarker?.coordinates?.longitude
+                  }}
+                  mapId="5f6b01e0c09b0450"
+                  onIdle={handleMapLoad}
+                  style={{ height: '600px', width: '100%' }}
+                />
+              )}
+              {tabIndex === 2 && <Typography>List of services offered along the walkway can be checked here.</Typography>}
             </DialogContent>
           </Dialog>
           <Button variant="contained" color="primary" onClick={() => setShowFormDialog(true)} style={{ marginTop: '20px' }}>

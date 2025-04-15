@@ -247,19 +247,21 @@ app.post('/approveCityCouncil', async (req, res) => {
 
 //------------------------------- Sign up --------------------------------
 app.post('/signup', async (req, res) => {
-    const { email, password, name, birthdate, userId, role } = req.body;
+    const { email, password, name, birthdate, userId, role, interests } = req.body;
 
-    if (!email || !password || !name || !birthdate || !userId || !role) {
+    if (!email || !password || !name || !birthdate || !userId || !role || !interests) {
         return res.status(400).send({ message: 'All fields are required' });
     }
-
+    if (!Array.isArray(interests)) {
+        return res.status(400).json({ message: 'Interests must be an array' });
+    }
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        await addDoc(UserCollection, { email, name, birthdate, userId, role });
+        await addDoc(UserCollection, { email, name, birthdate, userId, role, interests });
 
-        res.status(201).json({ message: 'User created successfully', user: { email, name, birthdate, userId, role } });
+        res.status(201).json({ message: 'User created successfully', user: { email, name, birthdate, userId, role, interests } });
     } catch (error) {
         console.error('Error creating user:', error.message);
         res.status(500).json({ message: 'Sign up failed: ' + error.message });
@@ -2010,7 +2012,7 @@ app.get('/topLikedWalkways', async (req, res) => {
             })
             .filter(Boolean);
         
-            console.log('Top liked walkways:', sorted.map(w => ({ id: w.id, count: w.count })));
+            //console.log('Top liked walkways:', sorted.map(w => ({ id: w.id, count: w.count })));
         res.status(200).json({ topLikedWalkways: sorted });
     } catch (error) {
         console.error('Error fetching top liked walkways:', error);
@@ -2055,7 +2057,7 @@ app.get('/topExploredWalkways', async (req, res) => {
             })
             .filter(Boolean);
 
-        console.log('Top explored walkways:', sorted.map(w => ({ id: w.id, count: w.count })));
+        //console.log('Top explored walkways:', sorted.map(w => ({ id: w.id, count: w.count })));
         res.status(200).json({ topExploredWalkways: sorted });
     } catch (error) {
         console.error('Error fetching top explored walkways:', error);
@@ -2066,185 +2068,7 @@ app.get('/topExploredWalkways', async (req, res) => {
 
 
 //------------------------------------------------------- Recomender system Functions ------------------------------------------------------------
-//-------------------------------- Collaborative Filtering --------------------------------
-//--------------------------------- Jaccard Similarity --------------------------------
-/**
- * 
- * @param {*} setA
- * @param {*} setB 
- * @returns {number} Jaccard Similarity between two sets
- */
-function jaccardSimilarity(setA, setB) {
-    const intersection = setA.filter(value => setB.includes(value)).length;
-    const union = new Set([...setA, ...setB]).size;
-    return union === 0 ? 0 : intersection / union;
-}
-
-//------------------------------- Find Similar Users --------------------------------
-/**
- * Finds users with similar interests to the target user.
- * @param {string} email - The email of the target user.
- * @param {number} minSimilarity - The minimum similarity threshold (0 to 1).
- * @returns {Promise<Array>} - An array of similar users with their similarity score and interests.
- */
-async function findSimilarUsers(email, minSimilarity = 0.3) {
-    const usersSnapshot = await getDocs(collection(db, 'users'));
-    const walkwaysSnapshot = await getDocs(collection(db, 'walkways'));    
-  
-    const walkwayIdMap = {}; // Mapeia walkwayId (campo) => doc.id
-    walkwaysSnapshot.docs.forEach(doc => {
-      const data = doc.data();
-      if (data.id !== undefined) {
-        walkwayIdMap[data.id] = doc.id;
-      }
-    });
-  
-    const currentUserDoc = usersSnapshot.docs.find(doc => doc.data().email === email);
-  
-    if (!currentUserDoc) {
-      throw new Error('Utilizador não encontrado com esse email.');
-    }
-  
-    const currentUser = currentUserDoc.data();
-    const targetInterests = currentUser.interests || [];
-  
-    return usersSnapshot.docs
-      .filter(doc => doc.data().email !== email && doc.data().interests)
-      .map(doc => {
-        const user = doc.data();
-        const similarity = jaccardSimilarity(targetInterests, user.interests);
-        
-        if (similarity >= minSimilarity) {
-          // Corrigir os walkwayId do histórico e favoritos para usarem doc.id
-          const fixedHistory = (user.history || []).map(entry => ({
-            ...entry,
-            walkwayDocId: walkwayIdMap[entry.walkwayId] || entry.walkwayId
-          }));
-  
-          const fixedFavorites = (user.favorites || []).map(fav =>
-            walkwayIdMap[fav] || fav
-          );
-  
-          return {
-            email: user.email,
-            similarity,
-            history: fixedHistory,
-            favorites: fixedFavorites
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
-  }
-  
-//------------------------------- Recommend Walkways --------------------------------
-/**
- * Recommends walkways based on the user's history and similar users' interests.
- * @param {string} email - The email of the target user.
- * @param {number} minSimilarity - The minimum similarity threshold (0 to 1).
- * @returns {Promise<Array>} - An array of recommended walkways.
- */
-async function recommendWalkways(email, minSimilarity = 0.3) {
-    console.log(`Recommending walkways for user with email: ${email} and minimum similarity: ${minSimilarity}`);
-    const similarUsers = await findSimilarUsers(email, minSimilarity);
-    console.log(`Similar users found:`, similarUsers);
-
-    const usersSnapshot = await getDocs(UserCollection);
-    const targetUserDoc = usersSnapshot.docs.find(doc => doc.data().email === email);
-
-    if (!targetUserDoc) {
-        console.error("User not found");
-        throw new Error("User not found");
-    }
-
-    const targetUser = targetUserDoc.data();
-    const targetWalkways = new Set((targetUser.history || []).map(entry => entry.walkwayId));
-    const targetFavorites = new Set(targetUser.favorites.map(fav => fav.toString()));
-    console.log(`Target user's history and favorites loaded.`);
-
-    const recommendedWalkways = new Set();
-
-    similarUsers.forEach(user => {
-        const userDoc = usersSnapshot.docs.find(doc => doc.data().email === user.email);
-        const userData = userDoc.data();
-        const userWalkways = userData.history || [];
-        const userFavorites = userData.favorites || [];
-
-        userWalkways.forEach(walkway => {
-            if (!targetWalkways.has(walkway.walkwayId)) {
-                console.log(`Adding recommended walkway ${walkway.walkwayId}`);
-                recommendedWalkways.add(walkway.walkwayId);
-            }
-        });
-        userFavorites.forEach(fav => {
-            const favId = fav.toString(); // Ensure the ID is consistent
-            if (!targetWalkways.has(favId) && !targetFavorites.has(favId)) {
-                console.log(`Adding recommended favorite ${favId}`);
-                recommendedWalkways.add(favId);
-            }
-        });
-    });
-
-    console.log(`Recommended walkways:`, Array.from(recommendedWalkways));
-
-    // Fetch all walkways in one call
-    const walkwayCollectionRef = collection(db, 'walkways');
-    const walkwaysSnapshot = await getDocs(walkwayCollectionRef);
-    //console.log(`All walkways in collection:`, walkwaysSnapshot.docs.map(doc => ({ id: doc.id, walkwayId: doc.data().id })));
-
-    // find recommended walkways by comparing each document's walkwayId to recommendedWalkways
-    const walkways = walkwaysSnapshot.docs
-        .filter(doc => recommendedWalkways.has(doc.id)) 
-        .map(doc => ({ id: doc.id, ...doc.data() }));
-    
-    //console.log(`Recommended walkways found:`, walkways);
-
-    return walkways;
-}
-
-//------------------------------- Routes --------------------------------
-
-// Endpoint para recomendar walkways
-app.get('/recommenderCollaborative', async (req, res) => {
-    const email = req.session.user?.email || userData.email;
-    const minSimilarity = req.query.minSimilarity ? parseFloat(req.query.minSimilarity) : 0.3;
-
-    if (!email) {
-        return res.status(401).json({ error: 'User is not authenticated' });
-    }
-
-    try {
-        const recommendations = await recommendWalkways(email, minSimilarity);
-        res.status(200).json({ recommendations });
-    } catch (error) {
-        console.error('Error recommending walkways:', error);
-        res.status(500).json({ error: 'Error recommending walkways' });
-    }
-});
-
-
-//------------------------------- Find Similar Users (GET) --------------------------------
-app.get('/similarUsers', async (req, res) => {
-    const email = req.query.email || req.session.user?.email || userData.email;
-    const minSimilarity = parseFloat(req.query.minSimilarity) || 0.3;
-
-    if (!email) {
-        return res.status(400).json({ error: 'Email é obrigatório para encontrar utilizadores semelhantes.' });
-    }
-
-    try {
-        const similarUsers = await findSimilarUsers(email, minSimilarity);
-        res.status(200).json({ similarUsers });
-        console.log(`🔍 Utilizadores semelhantes encontrados para ${email}:`, similarUsers.length);
-    } catch (error) {
-        console.error('❌ Erro ao encontrar utilizadores semelhantes:', error);
-        res.status(500).json({ error: 'Erro ao encontrar utilizadores semelhantes.' });
-    }
-});
-
-
-
-//------------------------------- Content based Filtering --------------------------------
+//------------------------------- Processing Data --------------------------------
 //------------------------------- Parse Distance --------------------------------
 const parseDistance = (distanceStr) => {
     if (typeof distanceStr === 'string') {
@@ -2253,7 +2077,6 @@ const parseDistance = (distanceStr) => {
     }
     return typeof distanceStr === 'number' ? distanceStr : 0;
   };
-  
 //-------------------------------  Normalize Data --------------------------------
 const normalize = (vector) => {
     const magnitude = Math.sqrt(vector.distance ** 2 + vector.difficulty ** 2);
@@ -2265,7 +2088,157 @@ const normalize = (vector) => {
         difficulty: vector.difficulty / magnitude
     };
 };
+//------------------------------- Get Walkway ID Maps --------------------------------
+function getWalkwayIdMaps(walkwaysSnapshot) {
+    const walkwayIdMap = {};
+    const firestoreIdToNumeric = {};
+    walkwaysSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.id !== undefined) {
+            walkwayIdMap[data.id] = doc.id;
+            firestoreIdToNumeric[doc.id] = data.id;
+        }
+    });
+    return { walkwayIdMap, firestoreIdToNumeric };
+}
 
+//------------------------------- Get Explored Document IDs --------------------------------
+function getExploredDocIds(history, favorites, walkwayIdMap) {
+    return new Set([
+        ...history.map(h => walkwayIdMap[h.walkwayId] ?? h.walkwayId),
+        ...favorites.map(f => walkwayIdMap[f] ?? f)
+    ]);
+}
+//-------------------------------- Collaborative Filtering --------------------------------
+//--------------------------------- Jaccard Similarity --------------------------------
+function jaccardSimilarity(setA, setB) {
+    if (!Array.isArray(setA) || !Array.isArray(setB)) return 0; // verifica se são arrays
+
+    const intersection = setA.filter(value => setB.includes(value)).length;
+    const union = new Set([...setA, ...setB]).size;
+    return union === 0 ? 0 : intersection / union;
+}
+//------------------------------- Find Similar Users --------------------------------
+async function findSimilarUsers(email, minSimilarity = 0.3, usersSnapshot = null, walkwaysSnapshot = null) {
+    if (!usersSnapshot) usersSnapshot = await getDocs(UserCollection);
+    if (!walkwaysSnapshot) walkwaysSnapshot = await getDocs(WalkwayCollection);
+
+    const walkwayIdMap = getWalkwayIdMaps(walkwaysSnapshot).walkwayIdMap;
+
+    const currentUserDoc = usersSnapshot.docs.find(doc => doc.data().email === email);
+    if (!currentUserDoc) throw new Error('User not found with that email.');
+
+    const currentUser = currentUserDoc.data();
+    const targetInterests = currentUser.interests || [];
+
+    console.log(`\n🔍 Finding similar users for ${email} with interests: ${JSON.stringify(targetInterests)}`);
+    return usersSnapshot.docs
+        .filter(doc => doc.data().email !== email && doc.data().interests)
+        .map(doc => {
+            const user = doc.data();
+            const similarity = jaccardSimilarity(targetInterests, user.interests);
+            if (similarity < minSimilarity) return null;
+
+            const fixedHistory = (user.history || []).map(entry => ({
+                ...entry,
+                walkwayDocId: walkwayIdMap[entry.walkwayId] || entry.walkwayId
+            }));
+
+            const fixedFavorites = (user.favorites || []).map(fav =>
+                walkwayIdMap[fav] || fav
+            );
+
+            return {
+                email: user.email,
+                interests: user.interests,
+                similarity,
+                history: fixedHistory,
+                favorites: fixedFavorites
+            };            
+        })
+        .filter(Boolean);
+}
+
+//------------------------------- Recommend Walkways --------------------------------
+
+async function recommendCollaborative(email, minSimilarity = 0.3) {
+    console.log(`\nRecommending walkways for user: ${email} with minimum similarity: ${minSimilarity}`);
+
+    // Pré-carregar os dados necessários
+    const usersSnapshot = await getDocs(UserCollection);
+    const walkwaysSnapshot = await getDocs(WalkwayCollection);
+
+    const similarUsers = await findSimilarUsers(email, minSimilarity, usersSnapshot, walkwaysSnapshot);
+    console.log(`\n✅ Similar users found: ${similarUsers.length}`);
+    similarUsers.forEach(user => {
+        console.log(`\n📎 Similar user: ${user.email}`);
+        console.log(`🔸 Interests: ${JSON.stringify(user.interests)}`);
+        console.log(`🔹 Similarity: ${user.similarity.toFixed(3)}`);
+    });
+
+    const targetUserDoc = usersSnapshot.docs.find(doc => doc.data().email === email);
+    if (!targetUserDoc) {
+        console.error("❌ User not found");
+        throw new Error("User not found");
+    }
+
+    const targetUser = targetUserDoc.data();
+    const targetWalkways = new Set((targetUser.history || []).map(entry => entry.walkwayId));
+    const targetFavorites = new Set((targetUser.favorites || []).map(fav => fav.toString()));
+
+    const recommendedWalkwayIds = new Set();
+
+    similarUsers.forEach(user => {
+        user.history.forEach(entry => {
+            const walkwayId = entry.walkwayDocId;
+            if (!targetWalkways.has(walkwayId)) {
+                recommendedWalkwayIds.add(walkwayId);
+            }
+        });
+
+        user.favorites.forEach(fav => {
+            if (!targetWalkways.has(fav) && !targetFavorites.has(fav)) {
+                recommendedWalkwayIds.add(fav);
+            }
+        });
+    });
+
+    // Obter os documentos reais dos passadiços recomendados
+    const recommendedWalkways = walkwaysSnapshot.docs
+        .filter(doc => recommendedWalkwayIds.has(doc.id))
+        .map(doc => ({ id: doc.id, ...doc.data() }));
+
+    console.log(`\n📌 Recommended walkways: ${recommendedWalkways.length}`);
+    recommendedWalkways.forEach(w => {
+        console.log(`\n🔹 Walkway ID: ${w.id}`);
+        console.log(`🔸 Name: ${w.name}`);
+        console.log(`🔸 Distance: ${w.specifics.distance}`);
+        console.log(`🔸 Difficulty: ${w.specifics.difficulty}`);
+    });
+    return recommendedWalkways;
+}
+
+
+//------------------------------- Routes --------------------------------
+
+// Endpoint para recomendar walkways
+app.get('/recommendedCollaborativeWalkways', async (req, res) => {
+    try {
+        const email = req.session.user?.email || userData.email;
+
+        if (!email) {
+            return res.status(401).json({ error: 'User is not authenticated' });
+        }
+
+        const recommended = await recommendCollaborative(email);
+        return res.status(200).json({ recommendations: recommended.slice(0, 4) });
+
+    } catch (error) {
+        console.error('❌ Error in /recommendedCollaborativeWalkways:', error);
+        return res.status(500).json({ error: 'Internal server error while recommending walkways.' });
+    }
+});
+//------------------------------- Content based Filtering --------------------------------
 //------------------------------- Euclidean Distance --------------------------------
 const euclideanDistance = (a, b) => {
     return Math.sqrt(
@@ -2283,45 +2256,103 @@ const haversine = (lat1, lon1, lat2, lon2) => {
               Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
 };
+
+//------------------------------- Merge Unique by ID --------------------------------
+function mergeUniqueById(primaryList, secondaryList) {
+    const existingIds = new Set(primaryList.map(item => item.id));
+    const uniqueFromSecondary = secondaryList.filter(item => !existingIds.has(item.id));
+    return [...primaryList, ...uniqueFromSecondary];
+}
+//------------------------------- Get Explored for Comparison --------------------------------
+function getExploredForComparison(history, favorites) {
+    const historyIds = new Set(history.map(h => h.id));
+    const filteredFavorites = favorites.filter(fav => !historyIds.has(fav.id)); // só favoritos não explorados
+    return [...history, ...filteredFavorites]; // usados para comparar
+}
+
+
 //------------------------------- Recommend by Euclidean --------------------------------
-const recommendByEuclidean = (explored, unexplored) => {
-    const normExplored = explored.map(w => {
-        const rawDistance = parseDistance(w.specifics.distance);
-        const rawDifficulty = w.specifics.difficulty;
+const recommendByEuclidean = (history, favorites, explored, allSystemWalkways) => {
+    console.log("\n📌 Starting Euclidean-based recommendation");
 
-        console.log(`\n🧮 Raw values for "${w.name}": distance=${rawDistance}, difficulty=${rawDifficulty}`);
+    // Set of IDs from user history
+    const historicIds = new Set(history.map(h => h.id));
 
-        const normalized = normalize({
-            distance: rawDistance,
-            difficulty: rawDifficulty
-        });
-
-        console.log(`📏 Normalized vector for "${w.name}":`, normalized);
-
-        return {
-            ...w,
-            ...normalized
-        };
+    console.log(`📜 User history includes ${history.length} walkway(s):`);
+    history.forEach(h => {
+        console.log(`   • ${h.name} (id: ${h.id})`);
     });
 
-    return unexplored.map(w => {
-        const norm = normalize({
-            distance: parseDistance(w.specifics.distance),
-            difficulty: w.specifics.difficulty
-        });
-
-        const distances = normExplored.map(e => {
-            const dist = euclideanDistance(e, norm);
-            console.log(`\n📐 Euclidean between "${w.name}" (ID: ${w.id}) and "${e.name}" (ID: ${e.id}): ${dist.toFixed(3)}`);
-            return dist;
-        });
-
-        const minDist = Math.min(...distances);
-        return { ...w, euclidean: minDist };
+    // Favorites that are not in history
+    const favoritesNotInHistory = favorites.filter(fav => !historicIds.has(fav.id));
+    console.log(`⭐ Favorites not in history (${favoritesNotInHistory.length}):`);
+    favoritesNotInHistory.forEach(f => {
+        console.log(`   • ${f.name} (id: ${f.id})`);
     });
+
+    // Unexplored walkways from the system
+    const unexplored = allSystemWalkways.filter(w => !historicIds.has(w.id));
+    console.log(`📂 Unexplored walkways from the system (${unexplored.length}):`);
+    unexplored.forEach(w => {
+        console.log(`   • ${w.name} (id: ${w.id})`);
+    });
+
+    // Combine history and favorites (no duplicates) for comparison
+    const allExploredForComparison = getExploredForComparison(history, favorites);
+    console.log(`🔎 Walkways used for comparison (${allExploredForComparison.length}):`);
+    allExploredForComparison.forEach(w => {
+        console.log(`   • ${w.name} (id: ${w.id})`);
+    });
+
+    // Normalize all explored walkways
+    const normExplored = allExploredForComparison
+        .filter(w => w.specifics && typeof w.specifics.difficulty === 'number')
+        .map(w => {
+            const normalized = normalize({
+                distance: parseDistance(w.specifics.distance),
+                difficulty: w.specifics.difficulty
+            });
+            return { ...w, ...normalized };
+        });
+    console.log(`📐 Normalized explored walkways: ${normExplored.length}`);
+
+    // Combine unexplored with not-walked favorites for scoring
+    const allToCompare = mergeUniqueById(unexplored, favoritesNotInHistory);
+    console.log(`📊 Total walkways to compare: ${allToCompare.length}`);
+
+    // Score each unexplored walkway by comparing to explored ones
+    const results = allToCompare
+        .filter(w => w.specifics && typeof w.specifics.difficulty === 'number')
+        .map(w => {
+            const norm = normalize({
+                distance: parseDistance(w.specifics.distance),
+                difficulty: w.specifics.difficulty
+            });
+
+            let minDist = Infinity;
+            let closestName = null;
+
+            normExplored.forEach(e => {
+                const dist = euclideanDistance(e, norm);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestName = e.name;
+                }
+            });
+
+            console.log(`📈 ${w.name} (id: ${w.id}) — closest to "${closestName}" with Euclidean distance: ${minDist.toFixed(3)}`);
+
+            return {
+                ...w,
+                isFavorite: favorites.some(f => f.id === w.id),
+                euclidean: minDist,
+                closestTo: closestName
+            };
+        });
+
+    console.log(`✅ Euclidean recommendation completed with ${results.length} result(s).\n`);
+    return results;
 };
-
-
 
 //------------------------------- Check if Geo Dispersed --------------------------------
 const isGeoDispersed = (explored) => {
@@ -2332,176 +2363,238 @@ const isGeoDispersed = (explored) => {
                 explored[i].coordinates.latitude, explored[i].coordinates.longitude,
                 explored[j].coordinates.latitude, explored[j].coordinates.longitude
             );
+            //console.log(`\n🌍 Haversine distance between "${explored[i].name}" and "${explored[j].name}": ${d.toFixed(2)} km`);
             if (d > maxHaversine) maxHaversine = d;
         }
     }
+    console.log(`\n🌍 Max Haversine distance between explored walkways: ${maxHaversine.toFixed(2)} km`);
     return maxHaversine > 100;
 };
 //------------------------------- Refine by Geolocation --------------------------------
-const refineByGeolocation = (euclideanScores, explored) => {
-    return euclideanScores.map(w => {
-        const minHaversine = Math.min(...explored.map(e =>
-            haversine(w.coordinates.latitude, w.coordinates.longitude, e.coordinates.latitude, e.coordinates.longitude)
-        ));
-        return { ...w, combinedScore: w.euclidean + minHaversine };
-    }).sort((a, b) => a.combinedScore - b.combinedScore);
+const refineByGeolocation = (recommended, explored) => {
+    if (explored.length === 0) return recommended;
+
+    return recommended
+        .map(recommendedWalkway => {
+            let closestName = "N/A";
+            let closestDistance = Infinity;
+
+            explored.forEach(exploredWalkway => {
+                if (recommendedWalkway.id === exploredWalkway.id) return;
+                const { latitude: lat1, longitude: lon1 } = recommendedWalkway.coordinates || {};
+                const { latitude: lat2, longitude: lon2 } = exploredWalkway.coordinates || {};
+
+                //console.log(`🌐 Comparing "${exploredWalkway.name}" (${lat1}, ${lon1}) to "${recommendedWalkway.name}" (${lat2}, ${lon2})`);
+
+                if (
+                    typeof lat1 !== 'number' || typeof lon1 !== 'number' ||
+                    typeof lat2 !== 'number' || typeof lon2 !== 'number'
+                ) {
+                    console.warn(`❌ Invalid coordinates for one of the walkways:`, { lat1, lon1, lat2, lon2 });
+                    return;
+                }
+
+                const dist = haversine(lat1, lon1, lat2, lon2);
+                console.log(`\n🌍 Haversine distance between "${exploredWalkway.name}" and "${recommendedWalkway.name}": ${dist.toFixed(2)} km`);
+                if (dist < closestDistance) {
+                    closestDistance = dist;
+                    closestName = exploredWalkway.name;
+                }
+            });
+
+            if (closestDistance <= 100) {
+                //console.log(`\n✅ Closest explored to "${closestName}": "${recommendedWalkway.name}" (${closestDistance.toFixed(2)} km)`);
+            }
+            return {
+                ...recommendedWalkway,
+                distance: closestDistance
+            };
+        })
+        .filter(w => w.distance < 100) // filtra os que estão a mais de 100 km
+        .sort((a, b) => a.distance - b.distance); // do mais próximo ao mais longe
 };
+
+//------------------------------- Get Exploration Context --------------------------------
+async function getExplorationContext(email) {
+    const usersSnapshot = await getDocs(UserCollection);
+    const userDoc = usersSnapshot.docs.find(doc => doc.data().email === email);
+    if (!userDoc) throw new Error('User not found');
+
+    const userData = userDoc.data();
+    const rawHistory = userData.history || [];
+    const rawFavorites = userData.favorites || [];
+
+    const walkwaysSnapshot = await getDocs(WalkwayCollection);
+    const allWalkways = walkwaysSnapshot.docs.map(doc => ({
+        ...doc.data(),
+        docId: doc.id,
+        id: doc.data().id
+    }));
+
+    const { walkwayIdMap, firestoreIdToNumeric } = getWalkwayIdMaps(walkwaysSnapshot);
+    const exploredDocIds = getExploredDocIds(rawHistory, rawFavorites, walkwayIdMap);
+
+    const historyIds = rawHistory.map(h => h.walkwayId);
+    const favoriteIds = rawFavorites.map(f => typeof f === 'number' ? f : firestoreIdToNumeric[f]);
+
+    // 🛠️ Mapear history para objetos completos
+    const history = allWalkways.filter(w => historyIds.includes(w.id));
+    
+    // 🛠️ Mapear favorites para objetos completos
+    const favorites = allWalkways.filter(w => favoriteIds.includes(w.id));
+
+    const explored = allWalkways.filter(w => exploredDocIds.has(w.docId));
+    const unexplored = allWalkways.filter(w => !exploredDocIds.has(w.docId));
+
+    console.log(`📜 User history count: ${history.length}`);
+    history.forEach(h => {
+        console.log(`   • (id: ${h.id}, docId: ${h.docId}) — ${h.name}`);
+    });
+
+    console.log(`⭐ User favorites count: ${favorites.length}`);
+    favorites.forEach(f => {
+        console.log(`   • (id: ${f.id}, docId: ${f.docId}) — ${f.name}`);
+    });
+
+    return {
+        userData,
+        history,
+        favorites,
+        allWalkways,
+        explored,
+        unexplored,
+        walkwayIdMap,
+        walkwaysSnapshot
+    };
+}
+
 
 //-------------------------------  Recommendation Content Based --------------------------------
 app.get('/recommendContentBased', async (req, res) => {
     try {
         const email = req.session.user?.email || userData.email;
         if (!email) return res.status(401).json({ error: 'User is not authenticated' });
+        console.log(`📨 Content-based recommendation for: ${email}`);
 
-        const snapshot = await getDocs(WalkwayCollection);
-        const allWalkways = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const {
+            favorites,
+            explored,
+            unexplored,
+        } = await getExplorationContext(email);
 
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email));
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) return res.status(404).json({ error: 'User not found' });
 
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data();
-        const history = userData.history || [];
-        const favorites = userData.favorites || [];
+        if (explored.length === 0) {
+            console.log("⚠️ No explored walkways found.");
+            return res.status(200).json([]);
+        }
 
-        const exploredIds = new Set([...history.map(h => h.walkwayId), ...favorites]);
-        const explored = allWalkways.filter(w => exploredIds.has(w.id));
-        const unexplored = allWalkways.filter(w => !exploredIds.has(w.id));
+        const euclideanScores = recommendByEuclidean(explored, favorites, unexplored);
+        console.log(`\n📊 Walkways scored by Euclidean -> ${euclideanScores.length}:`);
+        euclideanScores.forEach(w => {
+            console.log(`   📈 ${w.name} – closest to "${w.closestTo}" – score: ${w.euclidean.toFixed(3)}`);
+        });
 
-        if (explored.length === 0) return res.json([]);
-
-        const euclideanScores = recommendByEuclidean(explored, unexplored);
         const useGeo = !isGeoDispersed(explored);
-        const recommended = useGeo
+
+        if (useGeo) {
+            console.log("\n🌍 Geolocation refinement will be applied.");
+        } else {
+            console.log("📏 Using pure Euclidean-based recommendation (no geo refinement).");
+        }
+        
+        const scoredRecommendations = useGeo
             ? refineByGeolocation(euclideanScores, explored)
             : euclideanScores.sort((a, b) => a.euclidean - b.euclidean);
+        
+        console.log(`🔎 Scored recommendations (${scoredRecommendations.length}):`);
+        scoredRecommendations.forEach(w => {
+            const base = `→ ${w.name} (id: ${w.id})`;
+            if (useGeo) {
+                console.log(`   ${base} – Distance: ${w.distance?.toFixed(2)} km`);
+            } else {
+                console.log(`   ${base} – Euclidean: ${w.euclidean?.toFixed(3)}, closest to "${w.closestTo}"`);
+            }
+        });
+        
+        const uniqueRecommendations = [...new Map(
+            scoredRecommendations.map(w => [w.id, w])
+        ).values()];
+        
+        console.log(`\n🎯 Recommendations after deduplication: ${uniqueRecommendations.length}`);
+        uniqueRecommendations.forEach((w, index) => {
+            console.log(`   #${index + 1}: ${w.name} (id: ${w.id})`);
+        });
+        
+        res.status(200).json(uniqueRecommendations.slice(0, 4));
+        
 
-        res.status(200).json(recommended.slice(0, 5));
     } catch (err) {
-        console.error('Erro na recomendação híbrida:', err);
+        console.error('❌ Erro na recomendação baseada em conteúdo:', err);
         res.status(500).json({ error: 'Erro interno no sistema de recomendação.' });
     }
 });
+
 
 //-------------------------------  Recommendation Hybrid --------------------------------
 app.get('/recommendHybridCascade', async (req, res) => {
     try {
         const email = req.session.user?.email || userData.email;
-        if (!email) {
-            console.warn("❌ Email not found.");
-            return res.status(401).json({ error: 'User is not authenticated' });
-        }
-        console.log(`\n🔍 Starting hybrid cascade recommendation for: ${email}`);
+        if (!email) return res.status(401).json({ error: 'User is not authenticated' });
 
-        const usersSnapshot = await getDocs(UserCollection);
-        const targetUserDoc = usersSnapshot.docs.find(doc => doc.data().email === email);
-        if (!targetUserDoc) {
-            console.warn(`❌ User ${email} not found in Firestore.`);
-            return res.status(404).json({ error: 'User not found' });
+        console.log(`\n🧠 Hybrid cascade recommendation for: ${email}`);
+
+        const collaborativeRecommendations = await recommendCollaborative(email);
+        if (collaborativeRecommendations.length === 0) {
+            console.log("⚠️ No collaborative recommendations found.");
+            return res.status(200).json([]);
         }
 
-        const targetUser = targetUserDoc.data();
-        const targetInterests = targetUser.interests || [];
-        const targetHistory = targetUser.history || [];
-        const targetFavorites = targetUser.favorites || [];
+        const {
+            favorites,
+            history,
+            explored,
+        } = await getExplorationContext(email);
 
-        console.log(`\n🎯 User interests:`, targetInterests);
+        if (explored.length === 0) {
+            console.log("⚠️ No explored walkways found, skipping content filtering.");
+            return res.status(200).json(collaborativeRecommendations.slice(0, 4));
+        }
 
-        const walkwaysSnapshot = await getDocs(WalkwayCollection);
-        const walkwayIdMap = {};
-        const firestoreIdToNumeric = {};
-        walkwaysSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            if (data.id !== undefined) {
-                walkwayIdMap[data.id] = doc.id;
-                firestoreIdToNumeric[doc.id] = data.id;
-            }
+        const euclideanScores = recommendByEuclidean(history, favorites, explored, collaborativeRecommendations);
+        console.log(`\n📊 Walkways scored by Euclidean -> ${euclideanScores.length}:`);
+        euclideanScores.forEach(w => {
+            console.log(`   📈 ${w.name} – closest to "${w.closestTo}" – score: ${w.euclidean.toFixed(3)}`);
         });
-
-        const similarUsers = usersSnapshot.docs
-            .map(doc => doc.data())
-            .filter(user => user.email !== email && user.interests)
-            .map(user => {
-                const similarity = jaccardSimilarity(targetInterests, user.interests);
-                return similarity >= 0.3 ? { ...user, similarity } : null;
-            })
-            .filter(Boolean)
-            .sort((a, b) => b.similarity - a.similarity);
-
-        console.log(`\n👥 Found ${similarUsers.length} similar users.`);
-        console.log(`🔍 Similar users interests:`, similarUsers.map(u => ({ email: u.email, interests: u.interests })));
-        
-        console.log(`\n📜 User history (walkway IDs):`, targetHistory.map(h => firestoreIdToNumeric[h.walkwayId] ?? h.walkwayId));
-        console.log(`⭐ User favorite (walkway IDs):`, targetFavorites.map(f => firestoreIdToNumeric[f] ?? f ?? f));
-        
-        similarUsers.forEach(user => {
-            const userEmail = user.email;
-            const userHistory = (user.history || []).map(h => firestoreIdToNumeric[walkwayIdMap[h.walkwayId] ?? h.walkwayId] ?? h.walkwayId);
-            const userFavorites = (user.favorites || []).map(f => firestoreIdToNumeric[walkwayIdMap[f] ?? f] ?? f);
-            console.log(`\n📖 ${userEmail} explored (history):`, userHistory);
-            console.log(`💖 ${userEmail} favorites:`, userFavorites);
-        });
-
-        const targetExplored = new Set([
-            ...targetHistory.map(h => walkwayIdMap[h.walkwayId] || h.walkwayId),
-            ...targetFavorites.map(f => walkwayIdMap[f] || f)
-        ]);
-
-        const collaborativeRecommendations = new Set();
-        similarUsers.forEach(user => {
-            (user.history || []).forEach(entry => {
-                const docId = walkwayIdMap[entry.walkwayId] || entry.walkwayId;
-                if (!targetExplored.has(docId)) {
-                    collaborativeRecommendations.add(docId);
-                }
-            });
-            (user.favorites || []).forEach(fav => {
-                const docId = walkwayIdMap[fav] || fav;
-                if (!targetExplored.has(docId)) {
-                    collaborativeRecommendations.add(docId);
-                }
-            });
-        });
-
-        const collaborativeDetails = [...collaborativeRecommendations].map(docId => {
-            const doc = walkwaysSnapshot.docs.find(d => d.id === docId);
-            const data = doc?.data();
-            const numericId = firestoreIdToNumeric[docId];
-            const name = data?.name || "Unknown";
-            return `${name} (ID: ${numericId})`;
-        });
-
-        console.log(`\n📌 Collaborative recommendations:`, collaborativeDetails);
-
-        const allWalkways = walkwaysSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return { ...data, docId: doc.id };
-        });
-        const explored = allWalkways.filter(w => targetExplored.has(w.docId));
-        const recommendedWalkways = allWalkways.filter(w => collaborativeRecommendations.has(w.docId));
-
-        const euclideanScores = recommendByEuclidean(explored, recommendedWalkways);
-
         const useGeo = !isGeoDispersed(explored);
-        console.log(`\n📍 Geo-based refinement ${useGeo ? "enabled" : "disabled"} (based on dispersion)`);
-
-        let finalRecommendations = useGeo
+        if (useGeo) {
+            console.log("\n🌍 Geolocation refinement will be applied.");
+        } else {
+            console.log("📏 Using pure Euclidean-based recommendation (no geo refinement).");
+        }
+        const scored = useGeo
             ? refineByGeolocation(euclideanScores, explored)
             : euclideanScores.sort((a, b) => a.euclidean - b.euclidean);
+        
+        console.log(`🔎 Scored recommendations (${scored.length}):`);
+        scored.forEach(w => {
+            const base = `→ ${w.name} (id: ${w.id})`;
+            if (useGeo) {
+                console.log(`   ${base} – Distance: ${w.distance?.toFixed(2)} km`);
+            } else {
+                console.log(`   ${base} – Euclidean: ${w.euclidean?.toFixed(3)}, closest to "${w.closestTo}"`);
+            }
+        });
+        const finalRecommendations = [...new Map(scored.map(w => [w.id, w])).values()];
 
-        if (finalRecommendations.length === 0) {
-            console.warn("⚠️ No valid content-based recommendations. Returning collaborative only.");
-            finalRecommendations = recommendedWalkways.slice(0, 4); // já é baseado em colaborativo
-        }
-
-        console.log(`\n✅ Final top 4 recommendations:`, finalRecommendations.slice(0, 4).map(w => `${w.name} (ID: ${w.id})`));
-
-        res.status(200).json(finalRecommendations.slice(0, 4));
+        console.log(`\n🎯 Recommendations after deduplication: ${finalRecommendations.length}`);
+        finalRecommendations.forEach((w, index) => {
+            console.log(`   #${index + 1}: ${w.name} (id: ${w.id})`);
+        });
+        
+        return res.status(200).json(finalRecommendations.slice(0, 4));
     } catch (err) {
-        console.error('❌ Error in hybrid cascade recommendation:', err);
-        res.status(500).json({ error: 'Internal server error in recommendation system.' });
+        console.error("❌ Error in hybrid cascade recommendation:", err);
+        return res.status(500).json({ error: 'Internal error in hybrid recommendation.' });
     }
 });
 

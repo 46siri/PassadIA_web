@@ -180,6 +180,7 @@ const ProfileModal = ({ onLogout }) => {
             try {
                 const response = await Axios.post('http://localhost:8080/profileData', {}, { withCredentials: true });
                 setProfileData(response.data);
+                setUserId(response.data.userId);
                 setEmail(response.data.email);
                 setName(response.data.name);
                 setRole(response.data.role);

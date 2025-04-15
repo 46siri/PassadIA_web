@@ -190,10 +190,6 @@ const CityCouncilBoard = ({ onLogout }) => {
     data.append("specifics[distance]", formData.specifics.distance);
     data.append("specifics[maxHeight]", formData.specifics.maxHeight);
     data.append("specifics[minHeight]", formData.specifics.minHeight);
-    data.append("trajectory[start][latitude]", formData.trajectory.start.latitude);
-    data.append("trajectory[start][longitude]", formData.trajectory.start.longitude);
-    data.append("trajectory[end][latitude]", formData.trajectory.end.latitude);
-    data.append("trajectory[end][longitude]", formData.trajectory.end.longitude);
     data.append("geojson", formData.geojson instanceof File ? formData.geojson : JSON.stringify(formData.geojson));
     data.append("primaryImage", formData.primaryImage);
 
@@ -510,53 +506,7 @@ const CityCouncilBoard = ({ onLogout }) => {
                 fullWidth
                 margin="normal"
               />
-              <TextField required label="Max Height" name="specifics.maxHeight" type="number" onChange={handleFormChange} fullWidth margin="normal" />
-              <TextField required label="Min Height" name="specifics.minHeight" type="number" onChange={handleFormChange} fullWidth margin="normal" />
               
-              <TextField
-                required
-                label="Start Latitude"
-                name="trajectory.start.latitude"
-                type="number"
-                onChange={handleFormChange}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: -90, max: 90, step: "any" }}
-              />
-              
-              <TextField
-                required
-                label="Start Longitude"
-                name="trajectory.start.longitude"
-                type="number"
-                onChange={handleFormChange}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: -180, max: 180, step: "any" }}
-              />
-              
-              <TextField
-                required
-                label="End Latitude"
-                name="trajectory.end.latitude"
-                type="number"
-                onChange={handleFormChange}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: -90, max: 90, step: "any" }}
-              />
-              
-              <TextField
-                required
-                label="End Longitude"
-                name="trajectory.end.longitude"
-                type="number"
-                onChange={handleFormChange}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: -180, max: 180, step: "any" }}
-              />
-
               <Button type="submit" variant="contained" color="primary">Submit</Button>
             </form>
 

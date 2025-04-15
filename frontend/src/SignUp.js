@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Axios from "axios";
 import {
     Button, CssBaseline, Typography, TextField, Snackbar, 
@@ -8,6 +8,8 @@ import { styled } from '@mui/system';
 import theme from './Theme/theme';
 import GoogleLogo from './Theme/google-logo.svg';
 import logo from './Theme/images/logo.png';
+import Checkbox from '@mui/material/Checkbox';
+import ListItemText from '@mui/material/ListItemText';
 
 
 const ModalStyled = styled('div')(({ theme }) => ({
@@ -16,6 +18,17 @@ const ModalStyled = styled('div')(({ theme }) => ({
 
 const ModalContent = styled('div')(({ theme }) => ({
   ...theme.overrides.modalContent,
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  width: '90vw',
+  maxWidth: '600px',  
+  minWidth: '320px',       
+  maxHeight: '90vh',       
+  overflowY: 'auto',
+
+      
 
 }));
 
@@ -25,6 +38,10 @@ const LogoContainer = styled('img')({
 });
 const Title = styled(Typography)({
   ...theme.overrides.title,
+  fontSize: 'clamp(1.2rem, 2vw, 2rem)', // Responsivo
+  fontWeight: 'bold',
+  color: '#633f0f',
+  marginBottom: 20
 });
 
 const FormGroup = styled('form')({
@@ -55,6 +72,8 @@ const SignUpModal = ({ onClose }) => {
     const [userId, setUserId] = useState('');
     const [name, setName] = useState('');
     const [role, setRole] = useState('');
+    const [interestsList, setInterestsList] = useState([]);
+    const [selectedInterests, setSelectedInterests] = useState([]);
 
     const [institutionName, setInstitutionName] = useState('');
     const [positionType, setPositionType] = useState('');
@@ -110,7 +129,7 @@ const SignUpModal = ({ onClose }) => {
         } else {
           // Registo normal
           const response = await Axios.post("http://localhost:8080/signup", {
-            email, password, name, birthdate, userId, role
+            email, password, name, birthdate, userId, role, interests: selectedInterests
           });
     
           console.log('Sign-up successful:', response.data);
@@ -123,7 +142,17 @@ const SignUpModal = ({ onClose }) => {
         setError('Registration failed: ' + error.message);
       }
     };
-    
+    useEffect(() => {
+      const fetchInterests = async () => {
+        try {
+          const response = await Axios.get("http://localhost:8080/interests");
+          setInterestsList(response.data);
+        } catch (error) {
+          console.error("Failed to load interests:", error);
+        }
+      };
+      if (role === "Walker") fetchInterests();
+    }, [role]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -211,6 +240,26 @@ const SignUpModal = ({ onClose }) => {
                 value={birthdate}
                 onChange={(e) => setBirthdate(e.target.value)}
               />
+              <FormControl required variant="outlined" sx={{ minWidth: 310, maxWidth: 600 }}>
+                <InputLabel id="interests-label">Select Interests</InputLabel>
+                <SelectStyled
+                  labelId="interests-label"
+                  id="interests"
+                  multiple
+                  value={selectedInterests}
+                  onChange={(e) => setSelectedInterests(e.target.value)}
+                  renderValue={(selected) => selected.join(', ')}
+                  label="Select Interests"
+                >
+                  {interestsList.map((interest) => (
+                    <MenuItem key={interest.name} value={interest.name}>
+                      <Checkbox checked={selectedInterests.indexOf(interest.name) > -1} />
+                      <ListItemText primary={interest.name} />
+                    </MenuItem>
+                  ))}
+                </SelectStyled>
+              </FormControl>
+
             </>
             
           )}

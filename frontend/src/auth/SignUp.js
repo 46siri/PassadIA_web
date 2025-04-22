@@ -254,18 +254,25 @@ const SignUpModal = ({ onClose }) => {
                   multiple
                   value={selectedInterests}
                   onChange={(e) => setSelectedInterests(e.target.value)}
-                  renderValue={(selected) => selected.join(', ')}
+                  renderValue={(selected) =>
+                    selected
+                      .map((id) => {
+                        const interest = interestsList.find((i) => i.id === id);
+                        return interest ? interest.name : null;
+                      })
+                      .filter(Boolean)
+                      .join(', ')
+                  }
                   label="Select Interests"
                 >
                   {interestsList.map((interest) => (
-                    <MenuItem key={interest.name} value={interest.name}>
-                      <Checkbox checked={selectedInterests.indexOf(interest.name) > -1} />
+                    <MenuItem key={interest.id} value={interest.id}>
+                      <Checkbox checked={selectedInterests.includes(interest.id)} />
                       <ListItemText primary={interest.name} />
                     </MenuItem>
                   ))}
                 </SelectStyled>
               </FormControl>
-
             </>
             
           )}

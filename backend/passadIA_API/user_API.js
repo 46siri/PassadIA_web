@@ -3,10 +3,10 @@ const app = express.Router();
 const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
-const { UserCollection, auth, db, WalkwayCollection, InterestCollection } = require('../firebase-config');
-const {sendSignInLinkToEmail, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } = require('firebase/auth');
+const { UserCollection, auth, db, WalkwayCollection, InterestCollection, admin } = require('../firebase-config');
+const {sendSignInLinkToEmail, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, deleteUser, getUserByEmail } = require('firebase/auth');
 const { getStorage } = require("firebase/storage");
-const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion} = require('firebase/firestore');
+const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion, deleteDoc} = require('firebase/firestore');
 const { c, u } = require('tar');
 // get markers from walkways/marker.json
 const markers = require('../walkways/markers.json');
@@ -73,44 +73,7 @@ app.get('/user', async (req, res) => {
     }
 });
 
-//------------------------------- Get all users --------------------------------
-app.get('/allUsers', async (req, res) => {
-    try {
-        const snapshot = await getDocs(UserCollection);
-        const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log('Fetched all users.');
-        res.status(200).json(users);
-    } catch (error) {
-        console.error('Error fetching users:', error);
-        res.status(500).json({ error: 'Failed to fetch users' });
-    }
-});
-//------------------------------- Delete User --------------------------------
-app.post('/deleteUser', async (req, res) => {
-    const { email } = req.body;
 
-    if (!email) {
-        return res.status(400).json({ error: 'Email is required.' });
-    }
-
-    try {
-        const q = query(UserCollection, where('email', '==', email));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
-
-        await deleteDoc(snapshot.docs[0].ref);
-        console.log(`User deleted: ${email}`);
-        res.status(200).json({ message: 'User deleted successfully.' });
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        res.status(500).json({ error: 'Failed to delete user.' });
-    }
-});
-
-//------------------------------- Profile Data --------------------------------
 //------------------------------- Profile Data --------------------------------
 app.post('/profileData', async (req, res) => {
     const email = req.session.user?.email;
@@ -175,6 +138,45 @@ app.post('/updateProfile', async (req, res) => {
         res.status(500).json({ error: 'Error updating profile' });
     }
 });
+//------------------------------- Delete Account --------------------------------
+app.post('/deleteAccount', async (req, res) => {
+    const email = req.session.user?.email;
+
+    if (!email) {
+        return res.status(401).json({ error: 'User not authenticated.' });
+    }
+
+    try {
+        const q = query(UserCollection, where('email', '==', email));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        const userDoc = snapshot.docs[0];
+
+        // Elimina do Firestore
+        await deleteDoc(userDoc.ref);
+
+        // Elimina da Auth via Admin SDK
+        const userRecord = await admin.auth().getUserByEmail(email);
+        await admin.auth().deleteUser(userRecord.uid);
+
+        // Termina sessão
+        req.session.destroy(() => {
+            res.clearCookie('connect.sid');
+            res.status(200).json({ message: 'Account deleted successfully.' });
+        });
+
+        console.log(` Account and Auth deleted: ${email}`);
+    } catch (error) {
+        console.error('Error deleting account:', error);
+        res.status(500).json({ error: 'Failed to delete account.' });
+    }
+});
+
+
 // ------------------------------- get all interests --------------------------------
 app.get('/interests', async (req, res) => {
     try {
@@ -184,6 +186,76 @@ app.get('/interests', async (req, res) => {
     } catch (error) {
         console.error('Error fetching interests:', error);
         res.status(500).json({ error: 'Error fetching interests' });
+    }
+});
+//------------------------------- change photo -----------------------------------
+app.post('/changePhoto', async (req, res) => {
+    const {avatarURL } = req.body; // Certifique-se de enviar o email e o avatarURL no body da requisição.
+    const email = req.session.user?.email || userData.email;
+    if (!email || !avatarURL) {
+        return res.status(400).json({ error: 'Email and avatar URL are required' });
+    }
+
+    try {
+        // Busque o documento do usuário no Firestore com base no email
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Pegue a referência do primeiro documento encontrado (usuário)
+        const userDocRef = querySnapshot.docs[0].ref;
+
+        // Atualize o campo avatarURL no documento do usuário
+        await updateDoc(userDocRef, { avatarURL });
+
+        res.status(200).json({ message: 'Photo updated successfully' });
+        console.log('User photo updated for:', email);
+    } catch (error) {
+        console.error('Error updating photo:', error);
+        res.status(500).json({ error: 'Error updating photo' });
+    }
+});
+
+//-------------------------------------------------- Admin Routes ----------------------------------
+
+//------------------------------- Get all users --------------------------------
+app.get('/allUsers', async (req, res) => {
+    try {
+        const snapshot = await getDocs(UserCollection);
+        const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log('Fetched all users.');
+        res.status(200).json(users);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+//------------------------------- Delete User --------------------------------
+app.post('/deleteUser', async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    try {
+        const q = query(UserCollection, where('email', '==', email));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+
+        await deleteDoc(snapshot.docs[0].ref);
+        console.log(`User deleted: ${email}`);
+        res.status(200).json({ message: 'User deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ error: 'Failed to delete user.' });
     }
 });
 //------------------------------- Update Local Authority Profile --------------------------------
@@ -292,37 +364,7 @@ app.post('/approveCityCouncil', async (req, res) => {
     }
 });
 
-//------------------------------- change photo -----------------------------------
-app.post('/changePhoto', async (req, res) => {
-    const {avatarURL } = req.body; // Certifique-se de enviar o email e o avatarURL no body da requisição.
-    const email = req.session.user?.email || userData.email;
-    if (!email || !avatarURL) {
-        return res.status(400).json({ error: 'Email and avatar URL are required' });
-    }
 
-    try {
-        // Busque o documento do usuário no Firestore com base no email
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email));
-        const querySnapshot = await getDocs(q);
-
-        if (querySnapshot.empty) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // Pegue a referência do primeiro documento encontrado (usuário)
-        const userDocRef = querySnapshot.docs[0].ref;
-
-        // Atualize o campo avatarURL no documento do usuário
-        await updateDoc(userDocRef, { avatarURL });
-
-        res.status(200).json({ message: 'Photo updated successfully' });
-        console.log('User photo updated for:', email);
-    } catch (error) {
-        console.error('Error updating photo:', error);
-        res.status(500).json({ error: 'Error updating photo' });
-    }
-});
 
 
 module.exports = app;

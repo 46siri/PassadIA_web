@@ -30,6 +30,17 @@ export const AppContainer = styled(Container)(({ theme }) => ({
     paddingTop: theme.spacing(4),
   }));
   
+export const DeleteButton = styled(Button)(({ theme }) => ({
+    marginTop: theme.spacing(5),
+    marginRight: theme.spacing(110),
+    backgroundColor: theme.palette.common.white,
+    color:theme.palette.error.main,
+    '&:hover': {
+        backgroundColor: theme.palette.error.dark,
+        color:theme.palette.common.white,
+    },
+}));
+
 
 export const Logo = styled('img')(({ theme }) => ({
     position: 'absolute',
@@ -96,8 +107,8 @@ export const TextStyled = styled('span')(({ theme }) => ({
 }));
 
 export const EditButtonRight = styled(Button)(({ theme }) => ({
-    marginTop: theme.spacing(5),
-    marginLeft: theme.spacing(120),
+    marginTop: theme.spacing(7),
+    marginLeft: theme.spacing(100),
 }));
 
 const LogoutButton = styled(Button)(({ theme }) => ({
@@ -144,7 +155,7 @@ const ProfileModal = ({ onLogout }) => {
         setSuccess(null);
 
         try {
-            await Axios.get("http://localhost:8080/logout");
+            await Axios.get("http://localhost:8080/logout", { withCredentials: true });
             if (onLogout) {
                 onLogout();
             }
@@ -260,6 +271,20 @@ const ProfileModal = ({ onLogout }) => {
             setLoading(false);
         }
     };
+    const handleDeleteAccount = async () => {
+        try {
+            if (!window.confirm("Are you sure you want to delete your account? This action is irreversible.")) {
+                return;
+            }
+    
+            await Axios.post("http://localhost:8080/deleteAccount", {}, { withCredentials: true });
+            alert("Your account has been deleted.");
+            navigate("/App"); 
+        } catch (error) {
+            alert("Failed to delete account: " + error.message);
+        }
+    };
+    
 
 
     if (loading) {
@@ -455,7 +480,9 @@ const ProfileModal = ({ onLogout }) => {
                     </CardStyled>
                 </Grid2>
             </Grid2>
-
+            <DeleteButton variant="contained" color="error" onClick={handleDeleteAccount}>
+                Delete Account
+            </DeleteButton>
             <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>
                 Logout
             </LogoutButton>

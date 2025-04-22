@@ -1,70 +1,105 @@
 # Getting Started with PassadIA
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+PassadIA é uma aplicação web para explorar percursos pedestres, acompanhar o histórico de caminhadas e gerir perfis personalizados. A aplicação inclui **frontend em React** e **backend com Node.js/Firebase**.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 📁 Project Structure
 
-### `npm start`
+```
+PassadIA/
+├── frontend/           # React App
+├── backend/            # Node.js server (Express + Firebase Admin)
+├── README.md
+└── ...
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🚀 Running the Project
 
-### `npm test`
+O projeto é dividido em duas partes: **Frontend (React)** e **Backend (Node.js)**.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## ▶️ Frontend - React
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 📂 Caminho: `./frontend`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 📦 Instalar dependências
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+cd frontend
+npm install
+```
 
-### `npm run eject`
+### 🧪 Comandos disponíveis
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+#### `npm start`
+Inicia a aplicação em modo de desenvolvimento.Abre [http://localhost:3000](http://localhost:3000) no navegador.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+#### `npm test`
+Executa os testes interativos.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+#### `npm run build`
+Cria a versão de produção da aplicação no diretório `build`.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+#### `npm run eject`
+Ejecta a configuração padrão do Create React App.
 
-## Learn More
+---
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 🖥️ Backend - Node.js + Express + Firebase Admin
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 📂 Caminho: `./backend`
 
-### Code Splitting
+### 📦 Instalar dependências
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+cd backend
+npm install
+```
 
-### Analyzing the Bundle Size
+### 🔐 Requisitos
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- Criar um ficheiro `serviceAccountKey.json` com as credenciais da conta de serviço do Firebase.
+- Colocar esse ficheiro dentro da pasta `backend/` (e adicionar ao `.gitignore`!).
 
-### Making a Progressive Web App
+### ▶️ Iniciar o servidor
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```bash
+npm run dev
+```
 
-### Advanced Configuration
+> Por padrão, o servidor corre em [http://localhost:8080](http://localhost:8080)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
+## 🔐 Autenticação
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+A autenticação de utilizadores é feita com Firebase Auth.Para operações seguras (como eliminar contas), é usada a [Firebase Admin SDK](https://firebase.google.com/docs/admin/setup).
 
-### `npm run build` fails to minify
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## 📦 Dependências principais
+
+### Frontend
+- React
+- MUI (Material UI)
+- Axios
+- React Router
+
+### Backend
+- Express
+- Firebase Admin SDK
+- Firebase SDK
+- Cookie-Session
+- Multer
+
+---
+
+## 📚 Learn More
+
+- [Create React App Docs](https://facebook.github.io/create-react-app/docs/getting-started)
+- [Firebase Docs](https://firebase.google.com/docs)
+- [Material UI](https://mui.com/)

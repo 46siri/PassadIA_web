@@ -2,6 +2,8 @@ const { initializeApp } = require('firebase/app');
 const { getFirestore, collection } = require('firebase/firestore');
 const { getAuth } = require('firebase/auth'); // Import Firebase Authentication
 const { getStorage } = require('firebase/storage'); // Import Firebase Storage
+const admin = require('firebase-admin');
+const serviceAccount = require('./serviceAccountKey.json');
 
 const firebaseConfig = {
   apiKey: "AIzaSyDGWw7a3DMovfffSzo3V09JUfm_da4jOnM",
@@ -20,11 +22,16 @@ const app = initializeApp(firebaseConfig);
 // Initialize Firestore, Authentication, and Storage
 const db = getFirestore(app);
 const auth = getAuth(app);
-const storage = getStorage(app); // Initialize Firebase Storage
+const storage = getStorage(app); 
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://passadia-87c3c-default-rtdb.europe-west1.firebasedatabase.app"
+});
 
 // Reference to the Firestore collections
 const UserCollection = collection(db, 'users');
 const WalkwayCollection = collection(db, 'walkways');
 const InterestCollection = collection(db, 'interests');
 
-module.exports = { db, auth, storage, UserCollection, WalkwayCollection, InterestCollection };
+module.exports = { db, auth, storage, UserCollection, WalkwayCollection, InterestCollection, admin };

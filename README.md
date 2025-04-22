@@ -1,7 +1,6 @@
 # Getting Started with PassadIA
 
-PassadIA é uma aplicação web para explorar percursos pedestres, acompanhar o histórico de caminhadas e gerir perfis personalizados. A aplicação inclui **frontend em React** e **backend com Node.js/Firebase**.
-
+PassadIA is a web application to explore walkways, track walking history, and manage personalized user profiles. The app includes a React frontend and a Node.js/Firebase backend.
 ---
 
 ## 📁 Project Structure
@@ -18,7 +17,7 @@ PassadIA/
 
 ## 🚀 Running the Project
 
-O projeto é dividido em duas partes: **Frontend (React)** e **Backend (Node.js)**.
+The project is divided into two parts: **Frontend (React)** and **Backend (Node.js)**.
 
 ---
 
@@ -36,24 +35,24 @@ npm install
 ### 🧪 Comandos disponíveis
 
 #### `npm start`
-Inicia a aplicação em modo de desenvolvimento.Abre [http://localhost:3000](http://localhost:3000) no navegador.
+Starts the app in development mode.
+Opens [http://localhost:3000](http://localhost:3000) in your browser.
 
 #### `npm test`
-Executa os testes interativos.
+Runs interactive test runner.
 
 #### `npm run build`
-Cria a versão de produção da aplicação no diretório `build`.
+Builds the app for production to the `build` folder.
 
 #### `npm run eject`
-Ejecta a configuração padrão do Create React App.
-
+Ejects the default Create React App configuration.
 ---
 
 ## 🖥️ Backend - Node.js + Express + Firebase Admin
 
 ### 📂 Caminho: `./backend`
 
-### 📦 Instalar dependências
+### 📦 Install dependencies
 
 ```bash
 cd backend
@@ -62,8 +61,8 @@ npm install
 
 ### 🔐 Requisitos
 
-- Criar um ficheiro `serviceAccountKey.json` com as credenciais da conta de serviço do Firebase.
-- Colocar esse ficheiro dentro da pasta `backend/` (e adicionar ao `.gitignore`!).
+- Create a `serviceAccountKey.json` file with your Firebase service account credentials.
+- Place this file inside the `backend/` folder (and make sure it's listed in `.gitignore`!).
 
 ### ▶️ Iniciar o servidor
 
@@ -71,17 +70,18 @@ npm install
 npm run dev
 ```
 
-> Por padrão, o servidor corre em [http://localhost:8080](http://localhost:8080)
+> By default, the server runs on [http://localhost:8080](http://localhost:8080)
 
 ---
 
 ## 🔐 Autenticação
 
-A autenticação de utilizadores é feita com Firebase Auth.Para operações seguras (como eliminar contas), é usada a [Firebase Admin SDK](https://firebase.google.com/docs/admin/setup).
+User authentication is handled by Firebase Auth.
+For secure operations (such as deleting accounts), the [Firebase Admin SDK](https://firebase.google.com/docs/admin/setup) is used..
 
 ---
 
-## 📦 Dependências principais
+## 📦 Main dependencies
 
 ### Frontend
 - React

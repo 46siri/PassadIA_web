@@ -2,10 +2,7 @@ import React, { useState } from "react";
 import Axios from "axios";
 import {Button, Box, CssBaseline, Typography, TextField, Snackbar, ThemeProvider} from '@mui/material';
 import { styled } from '@mui/system';
-import { useNavigate } from 'react-router-dom';
-import theme from './Theme/theme';
-import GoogleLogo from './Theme/google-logo.svg';
-import logo from './Theme/images/logo.png';
+import theme from '../Theme/theme';
 
 const ModalStyled = styled('div')(({ theme }) => ({
   ...theme.overrides.modal,
@@ -52,7 +49,9 @@ const ForgotPassModal = ({ onClose }) => {
     console.log("Sending password reset request for email:", email); // Log email
     try {
       // Chama o endpoint do backend para enviar o email de redefinição de senha
-      const response = await Axios.post("http://localhost:8080/forgotPassword", { email });
+      const response = await Axios.post("http://localhost:8080/forgotPassword", { email },{
+        withCredentials: true
+      });
       setSuccess(response.data.message);
       setSuccess("Reset Email Sent!")
       setError(null);

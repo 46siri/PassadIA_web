@@ -6,15 +6,15 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useNavigate } from 'react-router-dom';
 
-import theme from './Theme/theme';
-import logo from './Theme/images/baselogo.jpg';
-import walkway0 from './Theme/images/walkway_0.jpg';
-import walkway1 from './Theme/images/walkway_1.jpg';
-import walkway2 from './Theme/images/walkway_2.jpg';
-import walkway3 from './Theme/images/walkway_3.jpg';
-import walkway4 from './Theme/images/walkway_4.jpg';
 
-// Styled components using MUI's new styled API
+import theme from '../Theme/theme';
+import logo from '../Theme/images/baselogo.jpg';
+import walkway0 from '../Theme/images/walkway_0.jpg';
+import walkway1 from '../Theme/images/walkway_1.jpg';
+import walkway2 from '../Theme/images/walkway_2.jpg';
+import walkway3 from '../Theme/images/walkway_3.jpg';
+import walkway4 from '../Theme/images/walkway_4.jpg';
+
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
@@ -98,7 +98,7 @@ const MoreMenuButton = styled(IconButton)(({ theme }) => ({
     top: 20,
 }));
 
-const Favorites = ({ onLogout }) => {
+const MyWalkways = ({ onLogout }) => {
     const [favoriteLocations, setFavoriteLocations] = useState(null);
     const [error, setError] = useState('');
     const [isEditing, setIsEditing] = useState(false);
@@ -114,7 +114,6 @@ const Favorites = ({ onLogout }) => {
         1: walkway1,
         2: walkway2,
         3: walkway3,
-        4: walkway4,
       };
     
     // Handle Logout
@@ -145,7 +144,7 @@ const Favorites = ({ onLogout }) => {
     };
 
     const handleLogoClick = () => {
-        navigate('/WalkerBoard');
+        navigate('/CityCouncilBoard');
     };
 
     useEffect(() => {
@@ -166,10 +165,10 @@ const Favorites = ({ onLogout }) => {
     useEffect(() => {
         const fetchFavoriteLocations = async () => {
             try {
-                const response = await Axios.get('http://localhost:8080/favorites');
+                const response = await Axios.get('http://localhost:8080/myWalkways');
                 setFavoriteLocations(response.data.favorites);
             } catch (error) {
-                console.error('Error fetching favorites:', error);
+                console.error('Error fetching Walkways:', error);
             }
         };
     
@@ -178,10 +177,10 @@ const Favorites = ({ onLogout }) => {
 
     const handleRemoveFavorite = async (locationId) => {
         try {
-            await Axios.post('http://localhost:8080/removeFavorite', { locationId });
+            await Axios.post('http://localhost:8080/removeWalkway', { locationId });
             setFavoriteLocations((prevLocations) => prevLocations.filter((location) => location.id !== locationId));
         } catch (error) {
-            console.error('Error removing favorite:', error);
+            console.error('Error removing Walkways:', error);
         }
     };
 
@@ -229,25 +228,11 @@ const Favorites = ({ onLogout }) => {
                 <MenuItem onClick={() => { handleClose(); handleLogoClick(); }}>
                 Dashboard
                 </MenuItem>
-                <MenuItem onClick={() => { handleClose(); navigate('/Profile'); }}>
+                <MenuItem onClick={() => { handleClose(); navigate('/CityCouncilProfile'); }}>
                 Profile
                 </MenuItem>
-                <MenuItem onClick={() => { handleClose(); navigate('/History'); }}>
-                History
-                </MenuItem>
             </Menu>
-            <Typography
-                variant="h4"
-                sx={{
-                    marginTop: theme.spacing(70),
-                    marginBottom: theme.spacing(0.2),
-                    color: theme.palette.primary.main,
-                    textAlign: 'center',
-                }}
-                >
-                My Favorite Walkways
-            </Typography>
-            <Grid2 container spacing={2} style={{ marginTop: '60px' }} columns={16}>
+            <Grid2 container spacing={2} style={{ marginTop: '120px' }} columns={16}>
                 {favoriteLocations && favoriteLocations.length > 0 ? (
                     favoriteLocations.map((location) => (
                         <Grid2 item xs={12} sm={6} md={4} key={location.id}>
@@ -277,7 +262,7 @@ const Favorites = ({ onLogout }) => {
                                                 style={{ marginTop: '10px' }}
                                                 onClick={() => handleRemoveFavorite(location.id)}
                                             >
-                                                Remove from Favorites
+                                                Remove from system
                                             </Button>
                                         </Grid2>
                                     </Grid2>
@@ -288,7 +273,7 @@ const Favorites = ({ onLogout }) => {
                     ) : (
                     <Grid2 item xs={12}>
                         <Typography variant="h6" color="textSecondary" align="center">
-                            No favorite locations found.
+                            No created locations found.
                         </Typography>
                     </Grid2>
                 )}
@@ -301,4 +286,4 @@ const Favorites = ({ onLogout }) => {
     );
 };
 
-export default Favorites;
+export default MyWalkways;

@@ -12,13 +12,13 @@ import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 import { APIProvider, AdvancedMarker, Map, Pin } from '@vis.gl/react-google-maps';
 import { useNavigate } from 'react-router-dom';
 
-import theme from './Theme/theme';
-import logo from './Theme/images/baselogo.jpg';
-import walkway0 from './Theme/images/walkway_0.jpg';
-import walkway1 from './Theme/images/walkway_1.jpg';
-import walkway2 from './Theme/images/walkway_2.jpg';
-import walkway3 from './Theme/images/walkway_3.jpg';
-import walkway4 from './Theme/images/walkway_4.jpg';
+import theme from '../Theme/theme';
+import logo from '../Theme/images/baselogo.jpg';
+import walkway0 from '../Theme/images/walkway_0.jpg';
+import walkway1 from '../Theme/images/walkway_1.jpg';
+import walkway2 from '../Theme/images/walkway_2.jpg';
+import walkway3 from '../Theme/images/walkway_3.jpg';
+import walkway4 from '../Theme/images/walkway_4.jpg';
 
 // Styled components using MUI's new styled API
 const AppContainer = styled(Container)(({ theme }) => ({
@@ -401,6 +401,8 @@ const WalkerBoard = ({ onLogout }) => {
         distanceCompleted: 0,
         finished: true,
         timeSpent: null
+      },{
+        withCredentials: true
       });
       updateHistoryEntry({
         walkwayId: selectedMarker.id,
@@ -559,7 +561,9 @@ const WalkerBoard = ({ onLogout }) => {
   };
   const fetchTopWalkways = async () => {
     try {
-      const response = await Axios.get("http://localhost:8080/topLikedWalkways");
+      const response = await Axios.get("http://localhost:8080/topLikedWalkways",{
+        withCredentials: true
+      });
       setTopLikedWalkways(response.data.topLikedWalkways);
     } catch (error) {
       console.error("Error fetching top liked walkways:", error);
@@ -577,7 +581,9 @@ const WalkerBoard = ({ onLogout }) => {
   };
   const fetchTopExploredWalkways = async () => {
     try {
-      const response = await Axios.get("http://localhost:8080/topExploredWalkways");
+      const response = await Axios.get("http://localhost:8080/topExploredWalkways",{
+        withCredentials: true
+      });
       setTopExploredWalkways(response.data.topExploredWalkways);
     } catch (error) {
       console.error("Error fetching top explored walkways:", error);
@@ -586,7 +592,9 @@ const WalkerBoard = ({ onLogout }) => {
 
   const fetchRecommendedWalkways = async () => {
     try {
-      const response = await Axios.get("http://localhost:8080/recommendHybridCascade");
+      const response = await Axios.get("http://localhost:8080/recommendHybridCascade",{
+        withCredentials: true
+      });
       setRecommendedWalkways(response.data); // <- corrigido
       console.log("Recommended Walkways:", response.data); // <- corrigido
     } catch (error) {

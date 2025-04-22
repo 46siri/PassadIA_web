@@ -5,8 +5,8 @@ import { styled } from '@mui/system';
 import theme from './Theme/theme';
 import GoogleLogo from './Theme/google-logo.svg';
 import logo from './Theme/images/baselogo.jpg';
-import SignInModal from './SignIn';
-import SignUpModal from './SignUp';
+import SignInModal from './auth/SignIn';
+import SignUpModal from './auth/SignUp';
 
 
 // Usando o novo sistema de estilo com 'styled'

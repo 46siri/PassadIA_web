@@ -13,8 +13,8 @@ import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 
 import { useNavigate } from 'react-router-dom';
 
-import theme from './Theme/theme';
-import logo from './Theme/images/baselogo.jpg';
+import theme from '../Theme/theme';
+import logo from '../Theme/images/baselogo.jpg';
 
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
@@ -140,7 +140,9 @@ const CityCouncilProfile = ({ onLogout }) => {
         setSuccess(null);
 
         try {
-            await Axios.get("http://localhost:8080/logout");
+            await Axios.get("http://localhost:8080/logout",{
+                withCredentials: true
+              });
             if (onLogout) {
                 onLogout();
             }
@@ -206,7 +208,9 @@ const CityCouncilProfile = ({ onLogout }) => {
                 registrationDate,
                 positionType,
                 location,      
-            });
+            },{
+                withCredentials: true
+              });
 
             if (response.status === 200) {
                 setIsEditing(false);
@@ -226,7 +230,9 @@ const CityCouncilProfile = ({ onLogout }) => {
             console.log('Uploading photo...');
             const response = await Axios.post('http://localhost:8080/changePhoto', {
                 avatarURL,
-            });
+            },{
+                withCredentials: true
+              });
             if (response.status === 200) {
                 setSuccess('Photo updated successfully!');
             }

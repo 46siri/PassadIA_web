@@ -7,12 +7,12 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import { useNavigate } from 'react-router-dom';
 
-import theme from './Theme/theme';
-import logo from './Theme/images/baselogo.jpg';
-import walkway0 from './Theme/images/walkway_0.jpg';
-import walkway1 from './Theme/images/walkway_1.jpg';
-import walkway2 from './Theme/images/walkway_2.jpg';
-import walkway3 from './Theme/images/walkway_3.jpg';
+import theme from '../Theme/theme';
+import logo from '../Theme/images/baselogo.jpg';
+import walkway0 from '../Theme/images/walkway_0.jpg';
+import walkway1 from '../Theme/images/walkway_1.jpg';
+import walkway2 from '../Theme/images/walkway_2.jpg';
+import walkway3 from '../Theme/images/walkway_3.jpg';
 
 // Styled components using MUI's new styled API
 const AppContainer = styled(Container)(({ theme }) => ({

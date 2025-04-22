@@ -5,9 +5,9 @@ import {
     ThemeProvider, FormControl, Select, MenuItem, InputLabel
   } from '@mui/material';
 import { styled } from '@mui/system';
-import theme from './Theme/theme';
-import GoogleLogo from './Theme/google-logo.svg';
-import logo from './Theme/images/logo.png';
+import theme from '../Theme/theme';
+import GoogleLogo from '../Theme/google-logo.svg';
+import logo from '../Theme/images/logo.png';
 import Checkbox from '@mui/material/Checkbox';
 import ListItemText from '@mui/material/ListItemText';
 
@@ -122,6 +122,8 @@ const SignUpModal = ({ onClose }) => {
             positionType,
             location,
             status: "pending"
+          },{
+            withCredentials: true
           });          
     
           console.log('City Council registration pending approval:', response.data);
@@ -130,6 +132,8 @@ const SignUpModal = ({ onClose }) => {
           // Registo normal
           const response = await Axios.post("http://localhost:8080/signup", {
             email, password, name, birthdate, userId, role, interests: selectedInterests
+          },{
+            withCredentials: true
           });
     
           console.log('Sign-up successful:', response.data);
@@ -145,7 +149,9 @@ const SignUpModal = ({ onClose }) => {
     useEffect(() => {
       const fetchInterests = async () => {
         try {
-          const response = await Axios.get("http://localhost:8080/interests");
+          const response = await Axios.get("http://localhost:8080/interests",{
+            withCredentials: true
+          });
           setInterestsList(response.data);
         } catch (error) {
           console.error("Failed to load interests:", error);

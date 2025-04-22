@@ -6,13 +6,16 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useNavigate } from 'react-router-dom';
 
-import theme from './Theme/theme';
-import logo from './Theme/images/baselogo.jpg';
-import walkway0 from './Theme/images/walkway_0.jpg';
-import walkway1 from './Theme/images/walkway_1.jpg';
-import walkway2 from './Theme/images/walkway_2.jpg';
-import walkway3 from './Theme/images/walkway_3.jpg';
 
+import theme from '../Theme/theme';
+import logo from '../Theme/images/baselogo.jpg';
+import walkway0 from '../Theme/images/walkway_0.jpg';
+import walkway1 from '../Theme/images/walkway_1.jpg';
+import walkway2 from '../Theme/images/walkway_2.jpg';
+import walkway3 from '../Theme/images/walkway_3.jpg';
+import walkway4 from '../Theme/images/walkway_4.jpg';
+
+// Styled components using MUI's new styled API
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
@@ -96,8 +99,8 @@ const MoreMenuButton = styled(IconButton)(({ theme }) => ({
     top: 20,
 }));
 
-const MyWalkways = ({ onLogout }) => {
-    const [favoriteLocations, setFavoriteLocations] = useState(null);
+const History = ({ onLogout }) => {
+    const [visitedLocations, setVisitedLocations] = useState(null);
     const [error, setError] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -120,7 +123,9 @@ const MyWalkways = ({ onLogout }) => {
         setSuccess(null);
 
         try {
-            await Axios.get("http://localhost:8080/logout");
+            await Axios.get("http://localhost:8080/logout",{
+                withCredentials: true
+              });
             if (onLogout) {
                 onLogout();
             }
@@ -142,7 +147,7 @@ const MyWalkways = ({ onLogout }) => {
     };
 
     const handleLogoClick = () => {
-        navigate('/CityCouncilBoard');
+        navigate('/WalkerBoard');
     };
 
     useEffect(() => {
@@ -161,33 +166,27 @@ const MyWalkways = ({ onLogout }) => {
     }, []);
 
     useEffect(() => {
-        const fetchFavoriteLocations = async () => {
+        const fetchVisitedLocations = async () => {
             try {
-                const response = await Axios.get('http://localhost:8080/myWalkways');
-                setFavoriteLocations(response.data.favorites);
+                const response = await Axios.get('http://localhost:8080/history', { withCredentials: true });
+    
+                if (response.status === 200 && Array.isArray(response.data.history)) {
+                    setVisitedLocations(response.data.history);
+                } else {
+                    setVisitedLocations([]);
+                }
             } catch (error) {
-                console.error('Error fetching Walkways:', error);
+                console.error('Error fetching visited locations:', error);
+                setVisitedLocations([]);
+            } finally {
+                setLoading(false);
             }
         };
     
-        fetchFavoriteLocations();
+        fetchVisitedLocations();
     }, []);
-
-    const handleRemoveFavorite = async (locationId) => {
-        try {
-            await Axios.post('http://localhost:8080/removeWalkway', { locationId });
-            setFavoriteLocations((prevLocations) => prevLocations.filter((location) => location.id !== locationId));
-        } catch (error) {
-            console.error('Error removing Walkways:', error);
-        }
-    };
-
-    
-
-
     
     
-
 
     if (loading) {
         return <CircularProgress />;
@@ -226,54 +225,89 @@ const MyWalkways = ({ onLogout }) => {
                 <MenuItem onClick={() => { handleClose(); handleLogoClick(); }}>
                 Dashboard
                 </MenuItem>
-                <MenuItem onClick={() => { handleClose(); navigate('/CityCouncilProfile'); }}>
+                <MenuItem onClick={() => { handleClose(); navigate('/Profile'); }}>
                 Profile
                 </MenuItem>
+                <MenuItem onClick={() => { handleClose(); navigate('/Favorites'); }}>
+                Favorites
+                </MenuItem>
             </Menu>
+            <Typography
+                variant="h4"
+                sx={{
+                    marginTop: theme.spacing(8),
+                    marginBottom: theme.spacing(4),
+                    color: theme.palette.primary.main,
+                    textAlign: 'center',
+                }}
+                >
+                My Walk History
+            </Typography>
             <Grid2 container spacing={2} style={{ marginTop: '120px' }} columns={16}>
-                {favoriteLocations && favoriteLocations.length > 0 ? (
-                    favoriteLocations.map((location) => (
-                        <Grid2 item xs={12} sm={6} md={4} key={location.id}>
-                            <CardStyled>
-                                <CardContent>
-                                    <Grid2 container spacing={2} columns={16}>
-                                        {/* Left side with title and image */}
-                                        <Grid2 size={8}>
-                                            <Typography variant="h6" component="h2">
-                                                <strong>{location.name}</strong> {/* Title in bold */}
-                                            </Typography>
-                                            <img
-                                                src={imageMap[location.id]} 
-                                                alt={location.name}
-                                                style={{ width: '80%', height: 'auto', marginTop: '10px' }}
-                                            />
-                                        </Grid2>
+            {visitedLocations && visitedLocations.length > 0 ? (
+                visitedLocations.map((location, index) => (
+                    <Grid2 item xs={12} sm={6} md={4} key={index}>
+                    <CardStyled>
+                        <CardContent>
+                        <Grid2 container spacing={2} columns={16}>
+                            {/* Coluna esquerda: nome + imagem */}
+                            <Grid2 size={8}>
+                            <Typography variant="h6" component="h2">
+                                <strong>{location.walkwayName}</strong>
+                            </Typography>
+                            <img
+                                src={imageMap[location.walkwayId] || walkway0}
+                                alt={location.walkwayName}
+                                style={{ width: '80%', height: 'auto', marginTop: '10px' }}
+                            />
+                            </Grid2>
 
-                                        {/* Right side with description and button */}
-                                        <Grid2 size={8}>
-                                            <Typography variant="body2" component="p" style={{ marginTop: '10px' }}>
-                                                {location.description}
-                                            </Typography>
-                                            <Button
-                                                variant="contained"
-                                                color="secondary"
-                                                style={{ marginTop: '10px' }}
-                                                onClick={() => handleRemoveFavorite(location.id)}
-                                            >
-                                                Remove from system
-                                            </Button>
-                                        </Grid2>
-                                    </Grid2>
-                                </CardContent>
-                            </CardStyled>
+                            {/* Coluna direita: detalhes */}
+                            <Grid2 size={8}>
+                            <Typography variant="body2" color="textSecondary" sx={{ fontSize: '1rem', marginTop: '100px' }}>
+                                🚶‍♂️ <strong>Started:</strong> {new Date(location.startDate).toLocaleString()}
+                            </Typography>
+                            {location.endDate && (
+                                <Typography variant="body2" color="textSecondary"sx={{ fontSize: '1rem', marginTop: '10px' }}>
+                                ✅ <strong>Finished:</strong> {new Date(location.endDate).toLocaleString()}
+                                </Typography>
+                            )}
+                            {location.distanceCompleted >0 && (
+                                <Typography variant="body2" color="textSecondary"sx={{ fontSize: '1rem', marginTop: '10px' }}>
+                                📏 <strong>Distance:</strong> {location.distanceCompleted}
+                                </Typography>
+                            )}
+                            {location.timeSpent >0 && (
+                                <Typography variant="body2" color="textSecondary"sx={{ fontSize: '1rem', marginTop: '10px' }}>
+                                ⏱️ <strong>Time Spent:</strong> {location.timeSpent}
+                                </Typography>
+                            )}
+                            {location.experience && (
+                                <Typography
+                                variant="body2"
+                                color="textSecondary"
+                                style={{ fontSize: '1rem', marginTop: '8px', fontStyle: 'italic' }}
+                                >
+                                💬 "{location.experience}"
+                                </Typography>
+                            )}
+                            {location.finished && (
+                                <Typography variant="body2" color="primary" sx={{ fontSize: '1rem', marginTop: '10px' }}>
+                                🏁 Walk Completed
+                                </Typography>
+                            )}
+                            </Grid2>
                         </Grid2>
-                    ))            
-                    ) : (
-                    <Grid2 item xs={12}>
-                        <Typography variant="h6" color="textSecondary" align="center">
-                            No created locations found.
-                        </Typography>
+                        </CardContent>
+                    </CardStyled>
                     </Grid2>
+                ))
+                ) : (
+                <Grid2 item xs={12}>
+                    <Typography variant="h6" color="textSecondary" align="center">
+                    No visited locations found.
+                    </Typography>
+                </Grid2>
                 )}
             </Grid2>
             <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>
@@ -284,4 +318,4 @@ const MyWalkways = ({ onLogout }) => {
     );
 };
 
-export default MyWalkways;
+export default History;

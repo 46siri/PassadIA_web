@@ -3,9 +3,9 @@ import Axios from "axios";
 import {Button, Box, CssBaseline, Typography, TextField, Snackbar, ThemeProvider} from '@mui/material';
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
-import theme from './Theme/theme';
-import GoogleLogo from './Theme/google-logo.svg';
-import logo from './Theme/images/logo.png';
+import theme from '../Theme/theme';
+import GoogleLogo from '../Theme/google-logo.svg';
+import logo from '../Theme/images/logo.png';
 import ForgotPassModal from './ForgotPass'; 
 
 const ModalStyled = styled('div')(({ theme }) => ({
@@ -57,7 +57,9 @@ const SignInModal = ({ onClose }) => {
     e.preventDefault();
     try {
         // Step 1: Sign in the user
-        const signInResponse = await Axios.post("http://localhost:8080/signin", { email, password });
+        const signInResponse = await Axios.post("http://localhost:8080/signin", { email, password }, {
+          withCredentials: true
+        });
         console.log("Sign-in response:", signInResponse.data);
 
         // Step 2: Set user session data
@@ -67,6 +69,8 @@ const SignInModal = ({ onClose }) => {
         // Step 3: Fetch user data, including role
         const userDataResponse = await Axios.get("http://localhost:8080/user", {
             params: { email: signInResponse.data.user.email }
+        },{
+          withCredentials: true
         });
         
         let role = userDataResponse.data.role;

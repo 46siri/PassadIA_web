@@ -12,13 +12,13 @@ import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 import { APIProvider, AdvancedMarker, Map, Pin } from '@vis.gl/react-google-maps';
 import { useNavigate } from 'react-router-dom';
 
-import theme from './Theme/theme';
-import logo from './Theme/images/baselogo.jpg';
-import walkway0 from './Theme/images/walkway_0.jpg';
-import walkway1 from './Theme/images/walkway_1.jpg';
-import walkway2 from './Theme/images/walkway_2.jpg';
-import walkway3 from './Theme/images/walkway_3.jpg';
-import walkway4 from './Theme/images/walkway_4.jpg';
+import theme from '../Theme/theme';
+import logo from '../Theme/images/baselogo.jpg';
+import walkway0 from '../Theme/images/walkway_0.jpg';
+import walkway1 from '../Theme/images/walkway_1.jpg';
+import walkway2 from '../Theme/images/walkway_2.jpg';
+import walkway3 from '../Theme/images/walkway_3.jpg';
+import walkway4 from '../Theme/images/walkway_4.jpg';
 
 // Styled components using MUI's new styled API
 const AppContainer = styled(Container)(({ theme }) => ({

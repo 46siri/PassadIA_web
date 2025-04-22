@@ -14,9 +14,8 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import InfoIcon from '@mui/icons-material/Info';
 import { useNavigate } from 'react-router-dom';
 
-import theme from './Theme/theme';
-import logo from './Theme/images/baselogo.jpg';
-import WalkerBoard from "./WalkerBoard";
+import theme from '../Theme/theme';
+import logo from '../Theme/images/baselogo.jpg';
 
 // Styled components using MUI's new styled API
 export const AppContainer = styled(Container)(({ theme }) => ({
@@ -190,12 +189,18 @@ const ProfileModal = ({ onLogout }) => {
                 setBio(response.data.bio);
                 setAvatarURL(response.data.avatarURL);
                 setSelectedInterests(Array.isArray(response.data.interests) ? response.data.interests : []); // Garantir que é array
-                const interestsResponse = await Axios.get('http://localhost:8080/interests');
+                const interestsResponse = await Axios.get('http://localhost:8080/interests',{
+                    withCredentials: true
+                  });
                 setInterestsList(interestsResponse.data);
-                const pointsResponse = await Axios.get('http://localhost:8080/points');
+                const pointsResponse = await Axios.get('http://localhost:8080/points',{
+                    withCredentials: true
+                  });
                 setPoints(pointsResponse.data);
                 console.log('Points:', pointsResponse.data);
-                const levelResponse = await Axios.get('http://localhost:8080/level');
+                const levelResponse = await Axios.get('http://localhost:8080/level',{
+                    withCredentials: true
+                  });
                 setLevel(levelResponse.data);
                 console.log('Level:', levelResponse.data);
             } catch (error) {
@@ -223,7 +228,9 @@ const ProfileModal = ({ onLogout }) => {
                 weight,      
                 bio,         
                 interests: selectedInterests,
-            });
+            },{
+                withCredentials: true
+              });
 
             if (response.status === 200) {
                 setIsEditing(false);

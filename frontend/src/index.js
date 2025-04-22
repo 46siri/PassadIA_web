@@ -2,16 +2,16 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Route, Routes, BrowserRouter as Router } from 'react-router-dom'; // Import Router
 import App from './App'; 
-import SignInModal from './SignIn';
-import SignUpModal from './SignUp';
-import WalkerBoard from './WalkerBoard';
-import ProfileModal from './Profile';
-import CityCouncilBoard from './CityCouncilBoard';
-import Favorites from './Favorites';
-import History from './History';
-import CityCouncilProfile from './CityCouncilProfile';
-import AdminBoard from './AdminBoard';
-import MyWalkways from './MyWalkways';
+import SignInModal from './auth/SignIn';
+import SignUpModal from './auth/SignUp';
+import WalkerBoard from './dashboards/WalkerBoard';
+import ProfileModal from './profiles/Profile';
+import CityCouncilBoard from './dashboards/CityCouncilBoard';
+import Favorites from './walkerSpecifics/Favorites';
+import History from './walkerSpecifics/History';
+import CityCouncilProfile from './profiles/CityCouncilProfile';
+import AdminBoard from './dashboards/AdminBoard';
+import MyWalkways from './cityCouncilSpecifics/MyWalkways';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

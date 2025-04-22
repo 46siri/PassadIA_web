@@ -8,8 +8,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
-import theme from './Theme/theme';
-import logo from './Theme/images/baselogo.jpg';
+import theme from '../Theme/theme';
+import logo from '../Theme/images/baselogo.jpg';
 
 const AppContainer = styled(Container)(({ theme }) => ({
   ...theme.root,

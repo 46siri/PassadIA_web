@@ -8,7 +8,7 @@ PassadIA is a web application to explore walkways, track walking history, and ma
 ```
 PassadIA/
 ├── frontend/           # React App
-├── backend/            # Node.js server (Express + Firebase Admin)
+├── backend/            # Node.js server (Express + Firebase)
 └── README.md
 ```
 

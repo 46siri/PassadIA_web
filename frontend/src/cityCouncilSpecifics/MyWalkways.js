@@ -1,19 +1,13 @@
 import React, { useEffect, useState } from "react";
 import Axios from "axios";
-import { Avatar, Button, Container, CssBaseline, IconButton, Typography, Menu, MenuItem, Grid2, CircularProgress, TextField, Card, CardContent, Paper, ThemeProvider } from '@mui/material';
+import { Avatar, Button, Container, CssBaseline, IconButton, Typography, Menu, MenuItem, Grid2, CircularProgress, TextField, Card, CardContent, ThemeProvider,Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { styled, textAlign } from '@mui/system';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useNavigate } from 'react-router-dom';
 
 
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
-import walkway0 from '../Theme/images/walkway_0.jpg';
-import walkway1 from '../Theme/images/walkway_1.jpg';
-import walkway2 from '../Theme/images/walkway_2.jpg';
-import walkway3 from '../Theme/images/walkway_3.jpg';
-import walkway4 from '../Theme/images/walkway_4.jpg';
 
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
@@ -101,7 +95,7 @@ const MoreMenuButton = styled(IconButton)(({ theme }) => ({
 const MyWalkways = ({ onLogout }) => {
     const [favoriteLocations, setFavoriteLocations] = useState(null);
     const [error, setError] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
+    const [editingWalkway, setEditingWalkway] = useState(null);
     const [loading, setLoading] = useState(true);
     const [anchorEl, setAnchorEl] = useState(null);
     const [success, setSuccess] = useState(null);
@@ -109,12 +103,10 @@ const MyWalkways = ({ onLogout }) => {
     const [role, setRole] = useState(null);
 
     const navigate = useNavigate();
-    const imageMap = {
-        0: walkway0,
-        1: walkway1,
-        2: walkway2,
-        3: walkway3,
-      };
+
+    const handleEditWalkway = (walkway) => {
+        setEditingWalkway(walkway);
+    };
     
     // Handle Logout
     const handleLogOut = async () => {
@@ -122,7 +114,7 @@ const MyWalkways = ({ onLogout }) => {
         setSuccess(null);
 
         try {
-            await Axios.get("http://localhost:8080/logout");
+            await Axios.get("http://localhost:8080/logout",{ withCredentials: true });
             if (onLogout) {
                 onLogout();
             }
@@ -165,8 +157,9 @@ const MyWalkways = ({ onLogout }) => {
     useEffect(() => {
         const fetchFavoriteLocations = async () => {
             try {
-                const response = await Axios.get('http://localhost:8080/myWalkways');
-                setFavoriteLocations(response.data.favorites);
+                const response = await Axios.get('http://localhost:8080/myWalkways',{ withCredentials: true });
+                setFavoriteLocations(response.data.walkways);
+                console.log(" locations:", response.data.walkways);
             } catch (error) {
                 console.error('Error fetching Walkways:', error);
             }
@@ -177,19 +170,52 @@ const MyWalkways = ({ onLogout }) => {
 
     const handleRemoveFavorite = async (locationId) => {
         try {
-            await Axios.post('http://localhost:8080/removeWalkway', { locationId });
+            await Axios.post('http://localhost:8080/removeWalkway', { locationId },{ withCredentials: true });
             setFavoriteLocations((prevLocations) => prevLocations.filter((location) => location.id !== locationId));
         } catch (error) {
             console.error('Error removing Walkways:', error);
         }
     };
 
+    const handleSubmitEdit = async () => {
+        if (!editingWalkway) return;
+        console.log("Editing Walkway:", editingWalkway);
+      
+        try {
+            const formData = new FormData();
+            formData.append('walkwayId', editingWalkway.docId);
+            
+            if (editingWalkway.name) formData.append('name', editingWalkway.name);
+            if (editingWalkway.description) formData.append('description', editingWalkway.description);
+            if (editingWalkway.district) formData.append('district', editingWalkway.district);
+            if (editingWalkway.region) formData.append('region', editingWalkway.region);
+            if (editingWalkway.newImageFile) {
+              formData.append('primaryImage', editingWalkway.newImageFile);
+            }
+            
+      
+          const response = await Axios.post(
+            'http://localhost:8080/updateWalkway',
+            formData,
+            {
+              withCredentials: true,
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          );
+      
+          console.log("✔️ Walkway updated:", response.data);
+          setSuccess("Walkway updated successfully!");
+          setEditingWalkway(null);
+          // Atualizar a lista se necessário aqui
+        } catch (err) {
+          console.error(" Error updating walkway:", err);
+          setError("Error updating walkway: " + err.message);
+        }
+      };
     
-
-
-    
-    
-
+      
 
     if (loading) {
         return <CircularProgress />;
@@ -232,10 +258,21 @@ const MyWalkways = ({ onLogout }) => {
                 Profile
                 </MenuItem>
             </Menu>
+            <Typography
+                variant="h4"
+                sx={{
+                    marginTop: theme.spacing(70),
+                    marginBottom: theme.spacing(0.2),
+                    color: theme.palette.primary.main,
+                    textAlign: 'center',
+                }}
+                >
+                My Added Walkways
+            </Typography>
             <Grid2 container spacing={2} style={{ marginTop: '120px' }} columns={16}>
                 {favoriteLocations && favoriteLocations.length > 0 ? (
                     favoriteLocations.map((location) => (
-                        <Grid2 item xs={12} sm={6} md={4} key={location.id}>
+                        <Grid2 item xs={12} sm={6} md={4} key={location.docId || location.id}>
                             <CardStyled>
                                 <CardContent>
                                     <Grid2 container spacing={2} columns={16}>
@@ -245,10 +282,10 @@ const MyWalkways = ({ onLogout }) => {
                                                 <strong>{location.name}</strong> {/* Title in bold */}
                                             </Typography>
                                             <img
-                                                src={imageMap[location.id]} 
+                                                src={location.primaryImage}
                                                 alt={location.name}
                                                 style={{ width: '80%', height: 'auto', marginTop: '10px' }}
-                                            />
+                                              />
                                         </Grid2>
 
                                         {/* Right side with description and button */}
@@ -264,6 +301,79 @@ const MyWalkways = ({ onLogout }) => {
                                             >
                                                 Remove from system
                                             </Button>
+                                            <Button
+                                                variant="outlined"
+                                                color="primary"
+                                                style={{ marginTop: '10px', marginLeft: '10px' }}
+                                                onClick={() => handleEditWalkway(location)}
+                                                >
+                                                Edit Walkway
+                                            </Button>
+                                            <Dialog open={!!editingWalkway} onClose={() => setEditingWalkway(null)}>
+                                                <DialogTitle>Edit Walkway</DialogTitle>
+                                                    <DialogContent>
+                                                        <TextField
+                                                        label="Name"
+                                                        fullWidth
+                                                        margin="normal"
+                                                        value={editingWalkway?.name || ''}
+                                                        onChange={(e) => setEditingWalkway({ ...editingWalkway, name: e.target.value })}
+                                                        />
+                                                        <TextField
+                                                        label="District"
+                                                        fullWidth
+                                                        margin="normal"
+                                                        value={editingWalkway?.district || ''}
+                                                        onChange={(e) => setEditingWalkway({ ...editingWalkway, district: e.target.value })}
+                                                        />
+                                                        <TextField
+                                                        label="Region"
+                                                        fullWidth
+                                                        margin="normal"
+                                                        value={editingWalkway?.region || ''}
+                                                        onChange={(e) => setEditingWalkway({ ...editingWalkway, region: e.target.value })}
+                                                        />
+                                                        <TextField
+                                                        label="Description"
+                                                        fullWidth
+                                                        multiline
+                                                        rows={4}
+                                                        margin="normal"
+                                                        value={editingWalkway?.description || ''}
+                                                        onChange={(e) => setEditingWalkway({ ...editingWalkway, description: e.target.value })}
+                                                        />
+
+                                                        <Button
+                                                        variant="outlined"
+                                                        component="label"
+                                                        style={{ marginTop: '16px' }}
+                                                        >
+                                                        Upload New Image
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            hidden
+                                                            onChange={(e) => {
+                                                            const file = e.target.files[0];
+                                                            if (file) {
+                                                                setEditingWalkway({ ...editingWalkway, newImageFile: file });
+                                                            }
+                                                            }}
+                                                        />
+                                                        </Button>
+                                                        {editingWalkway?.newImageFile && (
+                                                        <Typography variant="body2" style={{ marginTop: '8px' }}>
+                                                            Selected: {editingWalkway.newImageFile.name}
+                                                        </Typography>
+                                                        )}
+                                                    </DialogContent>
+                                                    <DialogActions>
+                                                        <Button onClick={() => setEditingWalkway(null)}>Cancel</Button>
+                                                        <Button onClick={handleSubmitEdit} color="primary" variant="contained">
+                                                        Save
+                                                        </Button>
+                                                    </DialogActions>
+                                                </Dialog>
                                         </Grid2>
                                     </Grid2>
                                 </CardContent>

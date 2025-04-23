@@ -8,11 +8,6 @@ import { useNavigate } from 'react-router-dom';
 
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
-import walkway0 from '../Theme/images/walkway_0.jpg';
-import walkway1 from '../Theme/images/walkway_1.jpg';
-import walkway2 from '../Theme/images/walkway_2.jpg';
-import walkway3 from '../Theme/images/walkway_3.jpg';
-import walkway4 from '../Theme/images/walkway_4.jpg';
 
 // Styled components using MUI's new styled API
 export const AppContainer = styled(Container)(({ theme }) => ({
@@ -109,13 +104,7 @@ const Favorites = ({ onLogout }) => {
     const [role, setRole] = useState(null);
 
     const navigate = useNavigate();
-    const imageMap = {
-        0: walkway0,
-        1: walkway1,
-        2: walkway2,
-        3: walkway3,
-        4: walkway4,
-      };
+
     
     // Handle Logout
     const handleLogOut = async () => {
@@ -266,7 +255,7 @@ const Favorites = ({ onLogout }) => {
                                                 <strong>{location.name}</strong> {/* Title in bold */}
                                             </Typography>
                                             <img
-                                                src={imageMap[location.id]} 
+                                                src={location.primaryImage} 
                                                 alt={location.name}
                                                 style={{ width: '80%', height: 'auto', marginTop: '10px' }}
                                             />

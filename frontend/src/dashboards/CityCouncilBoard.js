@@ -2,23 +2,18 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import Axios from "axios";
 import {
   Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab, IconButton,
-  Button, Container, CssBaseline, Typography, Paper, ThemeProvider, TextField, FormControl, FormLabel
+  Button, Container, CssBaseline, Typography, Paper, ThemeProvider, TextField, FormControl, FormLabel, Box
 } from '@mui/material';
+import Snackbar from '@mui/material/Snackbar';
+import MuiAlert from '@mui/material/Alert';
 import { styled } from '@mui/system';
 import CloseIcon from '@mui/icons-material/Close';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 import { APIProvider, AdvancedMarker, Map, Pin } from '@vis.gl/react-google-maps';
 import { useNavigate } from 'react-router-dom';
 
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
-import walkway0 from '../Theme/images/walkway_0.jpg';
-import walkway1 from '../Theme/images/walkway_1.jpg';
-import walkway2 from '../Theme/images/walkway_2.jpg';
-import walkway3 from '../Theme/images/walkway_3.jpg';
-import walkway4 from '../Theme/images/walkway_4.jpg';
 
 // Styled components using MUI's new styled API
 const AppContainer = styled(Container)(({ theme }) => ({
@@ -56,6 +51,9 @@ const MoreMenuButton = styled(IconButton)({
   right: 20,
   top: 20,
 });
+const Alert = React.forwardRef(function Alert(props, ref) {
+  return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 const CityCouncilBoard = ({ onLogout }) => {
   const [error, setError] = useState(null);
@@ -86,13 +84,7 @@ const CityCouncilBoard = ({ onLogout }) => {
   const [showFormDialog, setShowFormDialog] = useState(false);
   const navigate = useNavigate();
   const mapRef = useRef(null);
-  const imageMap = {
-    0: walkway0,
-    1: walkway1,
-    2: walkway2,
-    3: walkway3,
-    4: walkway4,
-  };
+
   const dataLayerRef = useRef(null);
 
   const handleTabChange = (_, newValue) => setTabIndex(newValue);
@@ -126,8 +118,9 @@ const CityCouncilBoard = ({ onLogout }) => {
   useEffect(() => {
     const fetchMarkers = async () => {
       try {
-        const response = await Axios.get("http://localhost:8080/markers");
+        const response = await Axios.get("http://localhost:8080/markers", { withCredentials: true });
         setMarkers(response.data);
+        
       } catch (error) {
         setError('Failed to fetch markers: ' + error.message);
       }
@@ -158,68 +151,126 @@ const CityCouncilBoard = ({ onLogout }) => {
   const handleFormChange = (event) => {
     const { name, value } = event.target;
     const keys = name.split('.');
+    let newValue = value;
+  
+    if (name.includes('latitude') || name.includes('longitude') || name.includes('distance')) {
+      newValue = value.replace(',', '.');
+    }
+  
     setFormData((prev) => {
-      if (keys.length > 1) {
-        return {
-          ...prev,
-          [keys[0]]: {
-            ...prev[keys[0]],
-            [keys[1]]: value,
-          },
-        };
+      const updated = { ...prev };
+      let current = updated;
+  
+      for (let i = 0; i < keys.length - 1; i++) {
+        const key = keys[i];
+        if (!current[key] || typeof current[key] !== 'object') {
+          current[key] = {};
+        }
+        current = current[key];
       }
-      return {
-        ...prev,
-        [name]: value,
-      };
+  
+      current[keys[keys.length - 1]] = newValue;
+      return updated;
     });
   };
-
+  
   const handleAddWalkway = async (e) => {
     e.preventDefault();
-
-    const data = new FormData();
-    data.append("id", formData.id);
-    data.append("name", formData.name);
-    data.append("description", formData.description);
-    data.append("district", formData.district);
-    data.append("region", formData.region);
-    data.append("coordinates[latitude]", formData.coordinates.latitude);
-    data.append("coordinates[longitude]", formData.coordinates.longitude);
-    data.append("specifics[difficulty]", formData.specifics.difficulty);
-    data.append("specifics[distance]", formData.specifics.distance);
-    data.append("specifics[maxHeight]", formData.specifics.maxHeight);
-    data.append("specifics[minHeight]", formData.specifics.minHeight);
-    data.append("geojson", formData.geojson instanceof File ? formData.geojson : JSON.stringify(formData.geojson));
-    data.append("primaryImage", formData.primaryImage);
-
-    console.log("data:",data);
+    console.log("Form data before submission:", formData);
+  
     try {
-      await Axios.post("http://localhost:8080/addWalkway", data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true
+      const requiredFields = [
+        formData.name,
+        formData.description,
+        formData.district,
+        formData.region,
+        formData.trajectory.start.latitude,
+        formData.trajectory.start.longitude,
+        formData.trajectory.end.latitude,
+        formData.trajectory.end.longitude,
+        formData.specifics.difficulty,
+        formData.specifics.distance,
+      ];
+      console.log("Required fields:", requiredFields);
+      if (requiredFields.some((field) => field === '' || field === null || field === undefined)) {
+        setError('Please fill in all required fields.');
+        return;
+      }
+  
+      const data = new FormData();
+  
+      data.append("name", formData.name);
+      data.append("description", formData.description);
+      data.append("district", formData.district);
+      data.append("region", formData.region);
+
+      data.append("coordinates[latitude]", formData.trajectory.start.latitude);
+      data.append("coordinates[longitude]", formData.trajectory.start.longitude);
+
+      data.append("specifics[difficulty]", formData.specifics.difficulty);
+      data.append("specifics[distance]", formData.specifics.distance);
+
+      data.append("trajectory[start][latitude]", formData.trajectory.start.latitude);
+      data.append("trajectory[start][longitude]", formData.trajectory.start.longitude);
+      data.append("trajectory[end][latitude]", formData.trajectory.end.latitude);
+      data.append("trajectory[end][longitude]", formData.trajectory.end.longitude);
+      data.append("trajectory[round]", formData.trajectory.round.toString());
+      
+      if (formData.geojson) {
+        if (formData.geojson instanceof File) {
+          data.append("geojson", formData.geojson);
+        } else {
+          const blob = new Blob([formData.geojson], { type: "application/json" });
+          data.append("geojson", blob, "geojson.json");
+        }
+      }
+  
+      if (formData.primaryImage && formData.primaryImage instanceof File) {
+        data.append("primaryImage", formData.primaryImage);
+      }
+      const addResponse = await Axios.post("http://localhost:8080/addWalkway", data, {
+        withCredentials: true,
       });
-      setSuccess('Walkway added successfully!');
+      const createdId = addResponse.data?.walkwayId;
+      if (!createdId) {
+        throw new Error("Walkway was added but no ID was returned.");
+      }
+      await Axios.post("http://localhost:8080/addWalkwayToMyList", {
+        walkwayId: createdId,
+      }, { withCredentials: true });
+
+      setSuccess('Walkway added and linked to your list successfully!');
+      setError(null);
+      setShowFormDialog(false);
+      
       setFormData({
-        id: '',
         name: '',
         description: '',
-        coordinates: { latitude: 0, longitude: 0 },
+        coordinates: { latitude: '', longitude: '' },
         district: '',
         geojson: '',
         primaryImage: '',
         region: '',
-        specifics: { difficulty: '', distance: '', maxHeight: '', minHeight: '' },
-        trajectory: { start: { latitude: 0, longitude: 0 }, end: { latitude: 0, longitude: 0 }, round: false }
+        specifics: { difficulty: '', distance: '' },
+        trajectory: { start: { latitude: '', longitude: '' }, end: { latitude: '', longitude: '' }, round: false }
       });
-      await Axios.post("http://localhost:8080/addWalkwayToMyList", { walkwayId: formData.id }, { withCredentials: true });
-      setSuccess('Walkway added to my list successfully!');
-      setError(null); // Clear any previous error message
+  
     } catch (error) {
-      setError('Failed to add walkway: ' + error.message);
+      console.error('Failed to add walkway:', error);
+      setError('Failed to add walkway: ' + (error?.response?.data?.message || error.message));
       setSuccess(null);
     }
   };
+  
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      coordinates: { ...prev.trajectory.start }
+    }));
+  }, [formData.trajectory.start]);
+  
+
   const transformedMarkers = markers
   .filter(marker => typeof marker.id === 'number' && marker.coordinates)
   .map(marker => ({
@@ -382,7 +433,11 @@ const CityCouncilBoard = ({ onLogout }) => {
             <DialogContent dividers>
               {tabIndex === 0 && (
                 <>
-                  <img src={imageMap[selectedMarker?.id]} alt={selectedMarker?.name} style={{ maxWidth: '100%', marginBottom: '20px' }} />
+                  <img
+                    src={selectedMarker?.primaryImage}
+                    alt={selectedMarker?.name}
+                    style={{ maxWidth: '100%', marginBottom: '20px' }}
+                  />
                   <Typography gutterBottom color="primary"><strong>District:</strong> {selectedMarker?.district}</Typography>
                   <Typography gutterBottom color="primary"><strong>Region:</strong> {selectedMarker?.region}</Typography>
                   <Typography gutterBottom color="secondary"><strong>Difficulty:</strong> {difficulty}</Typography>
@@ -413,109 +468,163 @@ const CityCouncilBoard = ({ onLogout }) => {
           <Dialog open={showFormDialog} onClose={() => setShowFormDialog(false)} fullWidth>
             <DialogTitle>Add New Walkway</DialogTitle>
             <DialogContent>
-              <form onSubmit={handleAddWalkway}>
-              <TextField required label="ID" name="id" onChange={handleFormChange} fullWidth margin="normal" />
-              <TextField required label="Name" name="name" onChange={handleFormChange} fullWidth margin="normal" />
-              <TextField required label="Description" name="description" onChange={handleFormChange} fullWidth margin="normal" />
-              
-              <TextField
-                required
-                label="Latitude"
-                name="coordinates.latitude"
-                type="number"
-                onChange={handleFormChange}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: -90, max: 90, step: "any" }}
-              />
-              
-              <TextField
-                required
-                label="Longitude"
-                name="coordinates.longitude"
-                type="number"
-                onChange={handleFormChange}
-                fullWidth
-                margin="normal"
-                inputProps={{ min: -180, max: 180, step: "any" }}
-              />
-
-              <TextField required label="District" name="district" onChange={handleFormChange} fullWidth margin="normal" />
-              
-              <FormControl fullWidth margin="normal" variant="outlined" sx={{ border: '1px solid rgba(0, 0, 0, 0.23)', borderRadius: 1, padding: '8px' }}>
-                <FormLabel>GeoJSON</FormLabel>
-                <Button variant="outlined" size="small" onClick={() => setGeoJsonInputType(prev => (prev === 'text' ? 'file' : 'text'))}>
-                  {geoJsonInputType === 'text' ? 'Switch to File Input' : 'Switch to Text Input'}
-                </Button>
-                {geoJsonInputType === 'text' ? (
-                  <TextField required name="geojson" label="Enter GeoJSON" onChange={handleFormChange} fullWidth margin="normal" />
-                ) : (
-                  <input
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAddWalkway(e);
+                }}
+              >
+                <TextField required label="Name" name="name" onChange={handleFormChange} fullWidth margin="normal" />
+                <TextField required label="Description" name="description" onChange={handleFormChange} fullWidth margin="normal" />
+                <Box display="flex" gap={2}>
+                  <TextField
                     required
+                    label="Start Latitude"
+                    name="trajectory.start.latitude"
+                    type="text"
+                    value={formData.trajectory.start.latitude}
+                    onChange={handleFormChange}
+                    fullWidth
+                    margin="normal"
+                  />
+                  <TextField
+                    required
+                    label="Start Longitude"
+                    name="trajectory.start.longitude"
+                    type="text"
+                    value={formData.trajectory.start.longitude}
+                    onChange={handleFormChange}
+                    fullWidth
+                    margin="normal"
+                  />
+                </Box>
+                <Box display="flex" gap={2}>
+                  <TextField
+                    required
+                    label="End Latitude"
+                    name="trajectory.end.latitude"
+                    type="text"
+                    value={formData.trajectory.end.latitude}
+                    onChange={handleFormChange}
+                    fullWidth
+                    margin="normal"
+                  />
+                  <TextField
+                    required
+                    label="End Longitude"
+                    name="trajectory.end.longitude"
+                    type="text"
+                    value={formData.trajectory.end.longitude}
+                    onChange={handleFormChange}
+                    fullWidth
+                    margin="normal"
+                  />
+                </Box>
+                <TextField required label="District" name="district" onChange={handleFormChange} fullWidth margin="normal" />
+                <FormControl fullWidth margin="normal" variant="outlined" sx={{ border: '1px solid rgba(0, 0, 0, 0.23)', borderRadius: 1, padding: '8px' }}>
+                  <FormLabel>GeoJSON</FormLabel>
+                  <Button variant="outlined" size="small" onClick={() => setGeoJsonInputType(prev => (prev === 'text' ? 'file' : 'text'))}>
+                    {geoJsonInputType === 'text' ? 'Switch to File Input' : 'Switch to Text Input'}
+                  </Button>
+                  {geoJsonInputType === 'text' ? (
+                    <TextField /*required*/ name="geojson" label="Enter GeoJSON" onChange={handleFormChange} fullWidth margin="normal" />
+                  ) : (
+                    <input
+                      /*required*/
+                      type="file"
+                      name="geojson"
+                      accept=".geojson,.json"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setFormData((prev) => ({ ...prev, geojson: reader.result }));
+                          };
+                          reader.readAsText(file);
+                        }
+                      }}
+                      style={{ marginTop: '8px', marginBottom: '8px', display: 'block', width: '100%' }}
+                    />
+                  )}
+                </FormControl>
+
+                <FormControl fullWidth margin="normal" variant="outlined" sx={{ border: '1px solid rgba(0, 0, 0, 0.23)', borderRadius: 1, padding: '8px' }}>
+                  <FormLabel>Walkway Image</FormLabel>
+                  <input
+                    /*required*/
                     type="file"
-                    name="geojson"
-                    accept=".geojson,.json"
+                    name="primaryImage"
+                    accept="image/*"
                     onChange={(e) => {
                       const file = e.target.files[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          setFormData((prev) => ({ ...prev, geojson: reader.result }));
-                        };
-                        reader.readAsText(file);
-                      }
+                      setFormData((prev) => ({ ...prev, primaryImage: file }));
                     }}
-                    style={{ marginTop: '8px', marginBottom: '8px', display: 'block', width: '100%' }}
+                    style={{ width: '100%', display: 'block', padding: '8px' }}
                   />
-                )}
-              </FormControl>
+                </FormControl>
 
-              <FormControl fullWidth margin="normal" variant="outlined" sx={{ border: '1px solid rgba(0, 0, 0, 0.23)', borderRadius: 1, padding: '8px' }}>
-                <FormLabel>Walkway Image</FormLabel>
-                <input
+                <TextField required label="Region" name="region" onChange={handleFormChange} fullWidth margin="normal" />
+                <TextField required label="Difficulty" name="specifics.difficulty" type="number" onChange={handleFormChange} fullWidth margin="normal" />
+                <TextField
                   required
-                  type="file"
-                  name="primaryImage"
-                  accept="image/*"
+                  label="Distance (km)"
+                  name="specifics.distance"
+                  type="text"
+                  value={formData.specifics.distance}
                   onChange={(e) => {
-                    const file = e.target.files[0];
-                    setFormData((prev) => ({ ...prev, primaryImage: file }));
+                    // Convert commas to dots for parsing, but keep the display with commas
+                    const value = e.target.value.replace(',', '.');
+                    if (/^\d*(,\d{0,2})?$/.test(e.target.value) || value === '') {
+                      setFormData((prev) => ({
+                        ...prev,
+                        specifics: { ...prev.specifics, distance: e.target.value },
+                      }));
+                    }
                   }}
-                  style={{ width: '100%', display: 'block', padding: '8px' }}
+                  fullWidth
+                  margin="normal"
                 />
-              </FormControl>
-
-              <TextField required label="Region" name="region" onChange={handleFormChange} fullWidth margin="normal" />
-              <TextField required label="Difficulty" name="specifics.difficulty" type="number" onChange={handleFormChange} fullWidth margin="normal" />
-              <TextField
-                required
-                label="Distance (km)"
-                name="specifics.distance"
-                type="text"
-                value={formData.specifics.distance}
-                onChange={(e) => {
-                  // Convert commas to dots for parsing, but keep the display with commas
-                  const value = e.target.value.replace(',', '.');
-                  if (/^\d*(,\d{0,2})?$/.test(e.target.value) || value === '') {
-                    setFormData((prev) => ({
-                      ...prev,
-                      specifics: { ...prev.specifics, distance: e.target.value },
-                    }));
-                  }
-                }}
-                fullWidth
-                margin="normal"
-              />
-              
-              <Button type="submit" variant="contained" color="primary">Submit</Button>
-            </form>
-
+                <FormControl fullWidth margin="normal">
+                  <FormLabel sx={{ fontSize: '1.2rem' }}>Round Trip</FormLabel>
+                  <select
+                    name="trajectory.round"
+                    value={formData.trajectory.round}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        trajectory: {
+                          ...prev.trajectory,
+                          round: e.target.value === "true"
+                        }
+                      }))
+                    }
+                    style={{
+                      padding: '18px',
+                      borderRadius: '4px',
+                      fontSize: '1.1rem' // aumenta o tamanho da letra
+                    }}
+                  >
+                    <option value="false" style={{ fontSize: '1.1rem' }}>No</option>
+                    <option value="true" style={{ fontSize: '1.1rem' }}>Yes</option>
+                  </select>
+                </FormControl>
+                <DialogActions>
+                  <Button type="submit" variant="contained" color="primary">
+                    Submit
+                  </Button>
+                  <Button onClick={() => setShowFormDialog(false)} color="secondary">
+                    Cancel
+                  </Button>
+                  <Snackbar open={!!success} autoHideDuration={4000} onClose={() => setSuccess(null)}>
+                    <Alert onClose={() => setSuccess(null)} severity="success">
+                      {success}
+                    </Alert>
+                  </Snackbar>
+                </DialogActions>              
+              </form>
             </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setShowFormDialog(false)} color="secondary">Cancel</Button>
-            </DialogActions>
           </Dialog>
-
           <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>Logout</LogoutButton>
         </APIProvider>
       </AppContainer>

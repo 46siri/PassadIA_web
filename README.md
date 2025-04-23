@@ -22,16 +22,16 @@ The project is divided into two parts: **Frontend (React)** and **Backend (Node.
 
 ## ▶️ Frontend - React
 
-### 📂 Caminho: `./frontend`
+### 📂 Path: `./frontend`
 
-### 📦 Instalar dependências
+### 📦 Install dependencies
 
 ```bash
 cd frontend
 npm install
 ```
 
-### 🧪 Comandos disponíveis
+### 🧪 Available commands
 
 #### `npm start`
 Starts the app in development mode.
@@ -49,7 +49,7 @@ Ejects the default Create React App configuration.
 
 ## 🖥️ Backend - Node.js + Express + Firebase Admin
 
-### 📂 Caminho: `./backend`
+### 📂 Path: `./backend`
 
 ### 📦 Install dependencies
 
@@ -58,12 +58,12 @@ cd backend
 npm install
 ```
 
-### 🔐 Requisitos
+### 🔐 Requirements
 
 - Create a `serviceAccountKey.json` file with your Firebase service account credentials.
 - Place this file inside the `backend/` folder (and make sure it's listed in `.gitignore`!).
 
-### ▶️ Iniciar o servidor
+### ▶️ Starting the server
 
 ```bash
 npm run dev
@@ -73,7 +73,7 @@ npm run dev
 
 ---
 
-## 🔐 Autenticação
+## 🔐 Athentication
 
 User authentication is handled by Firebase Auth.
 For secure operations (such as deleting accounts), the [Firebase Admin SDK](https://firebase.google.com/docs/admin/setup) is used..

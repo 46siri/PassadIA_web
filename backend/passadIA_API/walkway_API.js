@@ -3,10 +3,10 @@ const app = express.Router();
 const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
-const { UserCollection, auth, db, WalkwayCollection, InterestCollection } = require('../firebase-config');
+const { UserCollection, auth, db, WalkwayCollection, InterestCollection, storage } = require('../firebase-config');
 const {sendSignInLinkToEmail, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } = require('firebase/auth');
 const { getStorage } = require("firebase/storage");
-const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion} = require('firebase/firestore');
+const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion, deleteDoc} = require('firebase/firestore');
 const { c, u } = require('tar');
 // get markers from walkways/marker.json
 const markers = require('../walkways/markers.json');
@@ -133,7 +133,7 @@ app.post('/addWalkwayHistory', async (req, res) => {
             pointsAwarded: finished ? difficultyPoints[difficulty] || 50 : 0
         });
 
-        console.log(`✅ Histórico ${historyUpdated ? 'atualizado' : 'adicionado'} para ${email}. Pontos: +${finished ? (difficultyPoints[difficulty] || 50) : 0}`);
+        console.log(` Histórico ${historyUpdated ? 'atualizado' : 'adicionado'} para ${email}. Pontos: +${finished ? (difficultyPoints[difficulty] || 50) : 0}`);
 
     } catch (error) {
         console.error('Erro ao atualizar/adicionar histórico do passadiço:', error);
@@ -213,9 +213,9 @@ app.get('/getWalkwayComments', async (req, res) => {
         const comments = docData.publicComments || [];
 
         res.status(200).json({ comments });
-        console.log(`✅ Comentários para walkway ${walkwayId}:`, comments);
+        console.log(` Comentários para walkway ${walkwayId}:`, comments);
     } catch (err) {
-        console.error('❌ Erro ao obter comentários:', err);
+        console.error(' Erro ao obter comentários:', err);
         res.status(500).json({ error: 'Erro ao obter comentários' });
     }
 });
@@ -362,35 +362,44 @@ app.get('/allWalkways', async (req, res) => {
 });
 //------------------------------- get geojson from specific walkway table --------------------------------
 app.get('/getGeojson', async (req, res) => {
-    const { walkwayId } = req.query; // Ensure it's req.query and not req.body
+    const { walkwayId } = req.query;
 
     if (!walkwayId) {
         return res.status(400).json({ message: 'Walkway ID is required.' });
     }
 
     try {
-        // Query the 'walkways' collection to find a document where the 'id' field matches the walkwayId
+        // Query para encontrar o documento com o ID numérico
         const walkwayQuery = query(collection(db, 'walkways'), where('id', '==', parseInt(walkwayId)));
         const walkwaySnapshot = await getDocs(walkwayQuery);
 
-        // If no document is found, return an error
         if (walkwaySnapshot.empty) {
             return res.status(404).json({ message: 'Walkway not found.' });
         }
 
-        // Retrieve the document data
-        const walkwayDoc = walkwaySnapshot.docs[0]; // The first (and likely only) matching document
-        const geojsonString = walkwayDoc.data().geojson; // Access the geojson field
+        const walkwayDoc = walkwaySnapshot.docs[0];
+        const geojsonSource = walkwayDoc.data().geojson;
 
-        if (!geojsonString) {
+        if (!geojsonSource) {
             return res.status(404).json({ message: 'GeoJSON not found for this walkway.' });
         }
 
-        // Parse the GeoJSON string back into an object
-        const geojson = JSON.parse(geojsonString);
+        let geojson;
 
-        // Send the GeoJSON back to the frontend
+        // Caso seja uma URL (Storage)
+        if (geojsonSource.startsWith('http')) {
+            const response = await fetch(geojsonSource);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch GeoJSON from storage: ${response.statusText}`);
+            }
+            geojson = await response.json(); // Faz o parsing do JSON vindo da URL
+        } else {
+            // Caso contrário, assume que está em string JSON diretamente
+            geojson = JSON.parse(geojsonSource);
+        }
+
         res.status(200).json({ geojson });
+
     } catch (error) {
         console.error('Error fetching GeoJSON:', error);
         res.status(500).json({ message: 'Error fetching GeoJSON.', error: error.message });
@@ -425,95 +434,100 @@ app.post('/deleteWalkway', async (req, res) => {
 //------------------------------- add walkway to collection --------------------------------
 app.post('/addWalkway', upload.fields([{ name: 'geojson' }, { name: 'primaryImage' }]), async (req, res) => {
     try {
-        // Extract the fields from FormData
-        const {
-            id,
-            name,
-            description,
-            district,
-            region,
-            'coordinates[latitude]': latitude,
-            'coordinates[longitude]': longitude,
-            'specifics[difficulty]': difficulty,
-            'specifics[distance]': distance,
-            'specifics[maxHeight]': maxHeight,
-            'specifics[minHeight]': minHeight,
-            'trajectory[start][latitude]': startLatitude,
-            'trajectory[start][longitude]': startLongitude,
-            'trajectory[end][latitude]': endLatitude,
-            'trajectory[end][longitude]': endLongitude
-        } = req.body;
-
-        // Ensure all required fields are present
-        if (!id || !name || !description || !latitude || !longitude || !district || !region || !difficulty || !distance || !maxHeight || !minHeight || !startLatitude || !startLongitude || !endLatitude || !endLongitude) {
-            return res.status(400).json({ message: 'All required fields must be provided.' });
+      const {
+        name,
+        description,
+        district,
+        region,
+        coordinates,
+        specifics,
+        trajectory
+      } = req.body;
+  
+      const latitude = coordinates?.latitude;
+      const longitude = coordinates?.longitude;
+      const difficulty = specifics?.difficulty;
+      const distance = specifics?.distance;
+      const startLatitude = trajectory?.start?.latitude;
+      const startLongitude = trajectory?.start?.longitude;
+      const endLatitude = trajectory?.end?.latitude;
+      const endLongitude = trajectory?.end?.longitude;
+      const round = trajectory?.round;
+  
+      if (!name || !description || !latitude || !longitude || !district || !region ||
+        !difficulty || !distance || !startLatitude || !startLongitude || !endLatitude || !endLongitude) {
+        return res.status(400).json({ message: 'Missing required fields.' });
+      }
+  
+      const allWalkways = await getDocs(WalkwayCollection);
+      let maxId = 0;
+      allWalkways.forEach(doc => {
+        const walkway = doc.data();
+        if (typeof walkway.id === 'number' && walkway.id > maxId) {
+          maxId = walkway.id;
         }
-
-        // Process GeoJSON file if uploaded
-        let geojsonUrl = null;
-        if (req.files && req.files['geojson']) {
-            const geojsonFile = req.files['geojson'][0];
-            const geojsonRef = ref(storage, `geojson/${uuidv4()}_${geojsonFile.originalname}`);
-            await uploadBytes(geojsonRef, geojsonFile.buffer);
-            geojsonUrl = await getDownloadURL(geojsonRef);
-        } else if (req.body.geojson) {
-            geojsonUrl = req.body.geojson; // If geojson is sent as a string
-        }
-
-        // Process Primary Image if uploaded
-        let primaryImageUrl = null;
-        if (req.files && req.files['primaryImage']) {
-            const primaryImageFile = req.files['primaryImage'][0];
-            const imageRef = ref(storage, `images/${uuidv4()}_${primaryImageFile.originalname}`);
-            await uploadBytes(imageRef, primaryImageFile.buffer);
-            primaryImageUrl = await getDownloadURL(imageRef);
-        } else if (req.body.primaryImage) {
-            primaryImageUrl = req.body.primaryImage; // If primaryImage is a URL string
-        }
-
-        // Construct the walkway data object to store in Firestore
-        const walkwayData = {
-            id,
-            name,
-            description,
-            coordinates: {
-                latitude: parseFloat(latitude),
-                longitude: parseFloat(longitude),
-            },
-            district,
-            geojson: geojsonUrl,
-            primaryImage: primaryImageUrl,
-            region,
-            specifics: {
-                difficulty: parseInt(difficulty),
-                distance: parseFloat(distance),
-                maxHeight: parseFloat(maxHeight),
-                minHeight: parseFloat(minHeight),
-            },
-            trajectory: {
-                start: {
-                    latitude: parseFloat(startLatitude),
-                    longitude: parseFloat(startLongitude),
-                },
-                end: {
-                    latitude: parseFloat(endLatitude),
-                    longitude: parseFloat(endLongitude),
-                },
-                round: req.body['trajectory[round]'] === 'true', // Parse boolean value
-            },
-        };
-
-        // Add walkway data to Firestore
-        const collectionRef = collection(db, 'walkways');
-        await addDoc(collectionRef, walkwayData);
-
-        res.status(200).json({ message: 'Walkway successfully added to the collection.' });
+      });
+      const nextId = maxId + 1;
+  
+      let geojsonUrl = null;
+      if (req.files?.geojson) {
+        const geojsonFile = req.files['geojson'][0];
+        const geojsonRef = ref(storage, `geojson/${uuidv4()}_${geojsonFile.originalname}`);
+        await uploadBytes(geojsonRef, geojsonFile.buffer);
+        geojsonUrl = await getDownloadURL(geojsonRef);
+      } else if (req.body.geojson) {
+        geojsonUrl = req.body.geojson;
+      }
+  
+      let primaryImageUrl = null;
+      if (req.files?.primaryImage) {
+        const imageFile = req.files['primaryImage'][0];
+        const imageRef = ref(storage, `images/${uuidv4()}_${imageFile.originalname}`);
+        await uploadBytes(imageRef, imageFile.buffer);
+        primaryImageUrl = await getDownloadURL(imageRef);
+      } else if (req.body.primaryImage) {
+        primaryImageUrl = req.body.primaryImage;
+      }
+  
+      const formattedDistance = `${parseFloat(distance).toFixed(1)} km`;
+  
+      const walkwayData = {
+        id: nextId,
+        name,
+        description,
+        coordinates: {
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
+        },
+        district,
+        geojson: geojsonUrl || null,
+        primaryImage: primaryImageUrl || null,
+        region,
+        specifics: {
+          difficulty: parseInt(difficulty),
+          distance: formattedDistance
+        },
+        trajectory: {
+          start: {
+            latitude: parseFloat(startLatitude),
+            longitude: parseFloat(startLongitude),
+          },
+          end: {
+            latitude: parseFloat(endLatitude),
+            longitude: parseFloat(endLongitude),
+          },
+          round: round === 'true',
+        },
+      };
+  
+      await addDoc(WalkwayCollection, walkwayData);
+  
+      res.status(200).json({ message: 'Walkway successfully added to the collection.', walkwayId: nextId });
     } catch (error) {
-        console.error('Error adding walkway to the collection:', error);
-        res.status(500).json({ message: 'Failed to add walkway to the collection.', error: error.message });
+      console.error('Error adding walkway to the collection:', error);
+      res.status(500).json({ message: 'Failed to add walkway to the collection.', error: error.message });
     }
-});
-
+  });
 
 //------------------------------- add geojson to specific walkway table --------------------------------
 app.post('/addGeojson', async (req, res) => {
@@ -572,163 +586,212 @@ app.post('/addPictureWalkway', async (req, res) => {
 //------------------------------- Add Walkway To My List of Created Walkways --------------------------------
 
 app.post('/addWalkwayToMyList', async (req, res) => {
-    const { walkwayId } = req.body;
-    const email = req.session.user?.email || userData.email;
+    const rawId = req.body.walkwayId;
+    const walkwayId = parseInt(rawId); 
+    const email = req.session.user?.email;
 
-    if (!email || !walkwayId) {
-        return res.status(400).json({ error: 'Email and walkway ID are required' });
+    if (!email || isNaN(walkwayId)) {
+        return res.status(400).json({ error: 'Valid email and numeric walkway ID are required' });
     }
 
     try {
-        // Get the user's document reference by querying the collection with the email
+        // Buscar documento do utilizador
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email)); // Query to find user document
-        const querySnapshot = await getDocs(q);
+        const userQuery = query(usersRef, where('email', '==', email));
+        const userSnapshot = await getDocs(userQuery);
 
-        // Check if the user document exists
-        if (querySnapshot.empty) {
+        if (userSnapshot.empty) {
             return res.status(404).json({ error: 'User not found' });
         }
-        // Get the first matching document reference
-        const userDocRef = querySnapshot.docs[0].ref;
 
-        // Get current createdWalkways or initialize an empty array
-        const userData = querySnapshot.docs[0].data();
+        const userDocRef = userSnapshot.docs[0].ref;
+        const userData = userSnapshot.docs[0].data();
         const createdWalkways = userData.createdWalkways || [];
 
-        // Check if the walkway is already in createdWalkways
-        if (createdWalkways.includes(walkwayId)) {
+        // Buscar passadiço pelo ID numérico
+        const walkwayQuery = query(WalkwayCollection, where('id', '==', walkwayId));
+        const walkwaySnapshot = await getDocs(walkwayQuery);
+
+        if (walkwaySnapshot.empty) {
+            return res.status(404).json({ error: 'Walkway not found' });
+        }
+
+        const walkwayDocId = walkwaySnapshot.docs[0].id;
+
+        // Verificar se já está na lista
+        if (createdWalkways.includes(walkwayDocId)) {
             return res.status(400).json({ error: 'Walkway already in your list' });
         }
 
-        // Add the walkway ID to the createdWalkways array
-        createdWalkways.push(walkwayId);
-
-        // Update the user's createdWalkways array in Firestore
+        // Adicionar à lista
+        createdWalkways.push(walkwayDocId);
         await updateDoc(userDocRef, { createdWalkways });
 
-        res.status(200).json({ message: 'Walkway added to your list' });
-        console.log('Walkway added to user list:', walkwayId);
-
+        res.status(200).json({ message: 'Walkway added to your list', docId: walkwayDocId });
+        console.log(`✔️ Walkway ${walkwayId} (docId=${walkwayDocId}) added to ${email}'s list`);
     } catch (error) {
         console.error('Error adding walkway to user list:', error);
         res.status(500).json({ error: 'Error adding walkway to user list' });
     }
 });
 
+
 //------------------------------- Get my list of walkways --------------------------------
 app.get('/myWalkways', async (req, res) => {
-    const email = req.session.user?.email || userData.email;
+    const email = req.session.user?.email;
 
     if (!email) {
         return res.status(401).json({ error: 'User is not authenticated' });
     }
 
     try {
-        // Query the user's document using their email
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('email', '==', email));
         const querySnapshot = await getDocs(q);
 
-        // Check if the user document exists
         if (querySnapshot.empty) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Get user data and createdWalkways
         const userData = querySnapshot.docs[0].data();
         const createdWalkways = userData.createdWalkways || [];
 
-        // If no walkways exist, return an empty array
         if (createdWalkways.length === 0) {
             return res.status(200).json({ message: 'No walkways found', walkways: [] });
         }
 
-        // Fetch each walkway by its document ID
         const walkways = [];
-        for (const walkwayId of createdWalkways) {
+
+        for (const docId of createdWalkways) {
             try {
-                // Get the walkway document by its Firestore document ID
-                const walkwayDoc = await getDoc(doc(WalkwayCollection, walkwayId));
+                const walkwayDocRef = doc(WalkwayCollection, docId);
+                const walkwayDoc = await getDoc(walkwayDocRef);
 
                 if (walkwayDoc.exists()) {
-                    walkways.push({ id: walkwayDoc.id, ...walkwayDoc.data() });
+                    const data = walkwayDoc.data();
+                    
+                    walkways.push({
+                        docId,
+                        name: data.name,
+                        description: data.description,
+                        district: data.district || '',
+                        region: data.region || '',
+                        primaryImage: data.primaryImage || null
+                      });
+                      
                 } else {
-                    console.warn(`Walkway with ID ${walkwayId} not found.`);
+                    console.warn(`Walkway document with ID ${docId} not found.`);
                 }
             } catch (err) {
-                console.error(`Error fetching walkway with ID ${walkwayId}:`, err);
+                console.error(`Error fetching walkway with Firestore doc ID ${docId}:`, err);
             }
         }
 
-        // Return the list of created walkways
         res.status(200).json({ walkways });
-        //console.log('Created walkways fetched:', walkways);
     } catch (error) {
         console.error('Error fetching created walkways:', error);
         res.status(500).json({ error: 'Error fetching created walkways' });
     }
 });
+
 //------------------------------- Remove Walkway From all Walkways ------------------------------
 app.post('/removeWalkway', async (req, res) => {
-    const { locationId } = req.body;
-    const email = req.session.user?.email || userData.email;
-
+    const walkwayId = req.body.walkwayId;
+    const email = req.session.user?.email;
+  
     if (!email) {
-        return res.status(401).json({ error: 'Staff is not authenticated' });
+      return res.status(401).json({ error: 'User is not authenticated' });
     }
-
+  
+    if (!walkwayId || isNaN(walkwayId)) {
+      return res.status(400).json({ error: 'Valid walkway ID is required.' });
+    }
+  
     try {
-        // Get the user's document reference by querying the collection with the email
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email)); // Query to find user document
-        const querySnapshot = await getDocs(q);
-
-        // Check if the user document exists
-        if (querySnapshot.empty) {
-            return res.status(404).json({ error: 'Staff not found' });
-        }
-
-        // Get the first matching document reference
-        const userDocRef = querySnapshot.docs[0].ref;
-
-        // Get current createdWalkways or initialize an empty array
-        const userData = querySnapshot.docs[0].data();
-        const createdWalkways = userData.createdWalkways || [];
-
-        // Query the 'walkways' collection to find a document where the 'id' field matches the locationId
-        const locationQuery = query(collection(db, 'walkways'), where('id', '==', locationId));
-        const locationSnapshot = await getDocs(locationQuery);
-
-        // If the location does not exist, return an error
-        if (locationSnapshot.empty) {
-            return res.status(404).json({ error: 'Walkway not found' });
-        }
-
-        // Get the Firestore document ID of the first matched location
-        const locationDocId = locationSnapshot.docs[0].id;
-
-        // Check if the location is in the createdWalkways array
-        if (!createdWalkways.includes(locationDocId)) {
-            return res.status(400).json({ error: 'Walkway not in list' });
-        }
-
-        // Remove the Firestore document ID of the location from the createdWalkways array
-        const updatedCreatedWalkways = createdWalkways.filter(id => id !== locationDocId);
-
-        // Update the user's createdWalkways array in Firestore
-        await updateDoc(userDocRef, { createdWalkways: updatedCreatedWalkways });
-
-        // Remove the walkway document from the 'walkways' collection
-        await deleteDoc(doc(db, 'walkways', locationDocId));
-
-        res.status(200).json({ message: 'Walkway removed from list and deleted from the system' });
-        console.log('Walkway removed from user list and deleted:', locationDocId);
-
+      // Buscar o utilizador
+      const usersRef = collection(db, 'users');
+      const userQuery = query(usersRef, where('email', '==', email));
+      const userSnapshot = await getDocs(userQuery);
+      if (userSnapshot.empty) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      const userDocRef = userSnapshot.docs[0].ref;
+      const userData = userSnapshot.docs[0].data();
+      const createdWalkways = userData.createdWalkways || [];
+  
+      // Buscar o passadiço
+      const walkwayQuery = query(WalkwayCollection, where('id', '==', walkwayId));
+      const walkwaySnapshot = await getDocs(walkwayQuery);
+      if (walkwaySnapshot.empty) {
+        return res.status(404).json({ error: 'Walkway not found' });
+      }
+  
+      const walkwayDocRef = walkwaySnapshot.docs[0].ref;
+      const walkwayDocId = walkwaySnapshot.docs[0].id;
+  
+      // Verifica se o passadiço foi mesmo criado por este utilizador
+      if (!createdWalkways.includes(walkwayDocId)) {
+        return res.status(403).json({ error: 'You do not have permission to delete this walkway' });
+      }
+  
+      // Atualiza a lista do utilizador
+      const updatedCreatedWalkways = createdWalkways.filter(id => id !== walkwayDocId);
+      await updateDoc(userDocRef, { createdWalkways: updatedCreatedWalkways });
+  
+      // Remove o documento do passadiço
+      await deleteDoc(walkwayDocRef);
+  
+      console.log(`✔️ Walkway ${walkwayId} removed successfully. by ${email}`);
+      res.status(200).json({ message: 'Walkway removed successfully.' });
+  
     } catch (error) {
-        console.error('Error removing walkway from the system:', error);
-        res.status(500).json({ error: 'Error removing walkway from the system' });
+      console.error(' Error removing walkway:', error);
+      res.status(500).json({ error: 'Error removing walkway.' });
     }
-});
+  });
 
+//------------------------------- Update Walkway --------------------------------
+app.post('/updateWalkway', upload.single('primaryImage'), async (req, res) => {
+    try {
+      const { walkwayId, name, description, district, region } = req.body;
+  
+      if (!walkwayId) {
+        return res.status(400).json({ error: 'Walkway ID is required.' });
+      }
+  
+      const docRef = doc(WalkwayCollection, walkwayId);
+      const snapshot = await getDoc(docRef)
+      if (!snapshot.exists()) {
+        return res.status(404).json({ error: 'Walkway not found.' });
+      }
+  
+      // Só adiciona campos que têm valor definido
+      const updates = { name, description, district, region };
+      Object.keys(updates).forEach(key => {
+        if (updates[key] === undefined || updates[key] === null || updates[key] === '') {
+          delete updates[key];
+        }
+      });
+  
+      // Se houver nova imagem, adiciona
+      if (req.file) {
+        const imageRef = ref(storage, `images/${uuidv4()}_${req.file.originalname}`);
+        await uploadBytes(imageRef, req.file.buffer);
+        const imageUrl = await getDownloadURL(imageRef);
+        updates.primaryImage = imageUrl;
+      }
+  
+      await updateDoc(docRef, updates);
+  
+      res.status(200).json({ message: 'Walkway updated successfully.', updates });
+    } catch (error) {
+      console.error("Error updating walkway:", error);
+      res.status(500).json({ error: "Failed to update walkway.", details: error.message });
+    }
+  });
+  
+  
+  
+  
 module.exports = app;

@@ -14,11 +14,6 @@ import { useNavigate } from 'react-router-dom';
 
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
-import walkway0 from '../Theme/images/walkway_0.jpg';
-import walkway1 from '../Theme/images/walkway_1.jpg';
-import walkway2 from '../Theme/images/walkway_2.jpg';
-import walkway3 from '../Theme/images/walkway_3.jpg';
-import walkway4 from '../Theme/images/walkway_4.jpg';
 
 // Styled components using MUI's new styled API
 const AppContainer = styled(Container)(({ theme }) => ({
@@ -114,14 +109,6 @@ const WalkerBoard = ({ onLogout }) => {
   const mapRef = useRef(null);
   const navigate = useNavigate();
   const dataLayerRef = useRef(null);
-
-  const imageMap = {
-    0: walkway0,
-    1: walkway1,
-    2: walkway2,
-    3: walkway3,
-    4: walkway4,
-  };
 
 //--------------------- Menu Handlers ---------------------//
   const handleClick = (event) => setAnchorEl(event.currentTarget);
@@ -246,7 +233,7 @@ const WalkerBoard = ({ onLogout }) => {
   useEffect(() => {
     const fetchMarkers = async () => {
       try {
-        const response = await Axios.get("http://localhost:8080/markers");
+        const response = await Axios.get("http://localhost:8080/markers", { withCredentials: true });
         setMarkers(response.data);
       } catch (error) {
         setError('Failed to fetch markers: ' + error.message);
@@ -652,7 +639,11 @@ const WalkerBoard = ({ onLogout }) => {
             <DialogContent dividers>
               {tabIndex === 0 && (
                 <>
-                  <img src={imageMap[selectedMarker?.id]} alt={selectedMarker?.name} style={{ maxWidth: '100%', marginBottom: '20px' }} />
+                  <img
+                    src={selectedMarker?.primaryImage}
+                    alt={selectedMarker?.name}
+                    style={{ maxWidth: '100%', marginBottom: '20px' }}
+                  />                  
                   <Typography gutterBottom color="primary"><strong>District:</strong> {selectedMarker?.district}</Typography>
                   <Typography gutterBottom color="primary"><strong>Region:</strong> {selectedMarker?.region}</Typography>
                   <Typography gutterBottom color="secondary"><strong>Difficulty:</strong> {difficulty}</Typography>
@@ -696,17 +687,17 @@ const WalkerBoard = ({ onLogout }) => {
                 </>
               )}
               {tabIndex === 1 && selectedMarker && (
-                              <Map
-                                key={selectedMarker.id}
-                                defaultZoom={14}
-                                defaultCenter={{
-                                  lat: selectedMarker?.coordinates?.latitude,
-                                  lng: selectedMarker?.coordinates?.longitude
-                                }}
-                                mapId="5f6b01e0c09b0450"
-                                onIdle={handleMapLoad}
-                                style={{ height: '600px', width: '100%' }}
-                              />
+                 <Map
+                 key={selectedMarker.id}
+                 defaultZoom={14}
+                 defaultCenter={{
+                   lat: selectedMarker?.coordinates?.latitude,
+                   lng: selectedMarker?.coordinates?.longitude
+                 }}
+                 mapId="5f6b01e0c09b0450"
+                 onIdle={handleMapLoad}
+                 style={{ height: '600px', width: '100%' }}
+               />
               )}
               {tabIndex === 2 && <Typography>List of services offered along the walkway can be checked here.</Typography>}
             </DialogContent>
@@ -780,7 +771,7 @@ const WalkerBoard = ({ onLogout }) => {
                 style={{ width: '300px', height: '180px' }} // Define o tamanho fixo das caixas
               >
                 <img 
-                  src={imageMap[walkway.id] || 'default_image.jpg'} 
+                  src={walkway.primaryImage} 
                   alt={walkway.name} 
                   style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }}
                 />
@@ -805,7 +796,7 @@ const WalkerBoard = ({ onLogout }) => {
                   style={{ width: '300px', height: '180px' }} // Fixed box size
                 >
                   <img 
-                    src={imageMap[walkway.id] || 'default_image.jpg'} 
+                    src={walkway.primaryImage } 
                     alt={walkway.name} 
                     style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }}
                   />
@@ -834,7 +825,7 @@ const WalkerBoard = ({ onLogout }) => {
                 style={{ width: '300px', height: '180px' }} // Define o tamanho fixo das caixas
               >
                 <img 
-                  src={imageMap[walkway.id] || 'default_image.jpg'} 
+                  src={walkway.primaryImage} 
                   alt={walkway.name} 
                   style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px' }}
                 />

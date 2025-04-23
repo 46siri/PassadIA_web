@@ -17,6 +17,22 @@ const upload = multer({ storage: multer.memoryStorage() });
 // create a global variable to store the user data
 let userData = {};
 
+
+app.get('/google-maps-key', (req, res) => {
+    const apiKey = 'AIzaSyDwGfxyjM21tprpmkBXNI6HGIuwzvLsBgo';
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Google Maps API key not configured' });
+    }
+    res.status(200).json({ apiKey });
+  });
+  
+app.get('/google-maps-mapID', (req, res) => {   
+    const mapID = '5f6b01e0c09b0450';
+    if (!mapID) {
+        return res.status(500).json({ error: 'Google Maps Map ID not configured' });
+    }
+    res.status(200).json({ mapID });
+});
 //------------------------------- Markers  and IDs --------------------------------
 
 app.get('/markers', async (req, res) => {

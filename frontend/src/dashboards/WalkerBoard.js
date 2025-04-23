@@ -95,7 +95,6 @@ const WalkerBoard = ({ onLogout }) => {
   const [tabIndex, setTabIndex] = useState(0);
   const [geojsonData, setGeojsonData] = useState(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [geoJsonLoaded, setGeoJsonLoaded] = useState(false); 
   const [topLikedWalkways, setTopLikedWalkways] = useState([]);
   const [topExploredWalkways, setTopExploredWalkways] = useState([]);
   const [recommendedWalkways, setRecommendedWalkways] = useState([]);
@@ -106,6 +105,8 @@ const WalkerBoard = ({ onLogout }) => {
   const [publicComments, setPublicComments] = useState([]);
   const [walkwayLikes, setWalkwayLikes] = useState(0);
   const [userHistory, setUserHistory] = useState([]);
+  const [googleApiKey, setGoogleApiKey] = useState(null);
+  const [mapid, setMapId] = useState(null);
   const mapRef = useRef(null);
   const navigate = useNavigate();
   const dataLayerRef = useRef(null);
@@ -128,6 +129,8 @@ const WalkerBoard = ({ onLogout }) => {
     }
   };
   const handleCloseDialog = () => {
+    setIsMapLoaded(false); 
+    setGeojsonData(null);  
     setSelectedMarker(null);
     setTabIndex(0);
     setComment('');
@@ -135,6 +138,20 @@ const WalkerBoard = ({ onLogout }) => {
   };
 
   //--------------------- Map Load Handler ---------------------//
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const response = await Axios.get('http://localhost:8080/google-maps-key', { withCredentials: true });
+        const mapId = await Axios.get('http://localhost:8080/google-maps-mapID', { withCredentials: true });
+        setGoogleApiKey(response.data.apiKey);
+        setMapId(mapId.data.mapID);
+      } catch (err) {
+        console.error('Erro ao buscar a Google Maps API key or map id:', err);
+      }
+    };
+  
+    fetchApiKey();
+  }, []);
   const handleMapLoad = (mapInstance) => {
     const googleMap = mapInstance.map || mapInstance.googleMap;
     setIsMapLoaded(true);
@@ -582,8 +599,8 @@ const WalkerBoard = ({ onLogout }) => {
       const response = await Axios.get("http://localhost:8080/recommendHybridCascade",{
         withCredentials: true
       });
-      setRecommendedWalkways(response.data); // <- corrigido
-      console.log("Recommended Walkways:", response.data); // <- corrigido
+      setRecommendedWalkways(response.data);
+      console.log("Recommended Walkways:", response.data); 
     } catch (error) {
       console.error("Error fetching recommended walkways:", error);
     }
@@ -596,7 +613,8 @@ const WalkerBoard = ({ onLogout }) => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AppContainer>
-        <APIProvider apiKey={'AIzaSyDwGfxyjM21tprpmkBXNI6HGIuwzvLsBgo'}>
+      {googleApiKey && (
+          <APIProvider apiKey={googleApiKey}>
           <Logo src={logo} alt="logo" onClick={handleLogoClick} />
           <MoreMenuButton aria-label="more" onClick={handleClick}>
             <MoreVertIcon />
@@ -610,7 +628,7 @@ const WalkerBoard = ({ onLogout }) => {
             <Map
               defaultZoom={10}
               defaultCenter={{ lat: 41.5564, lng: -8.16415 }}
-              mapId='5f6b01e0c09b0450'
+              mapId={mapid}
               mapTypeId="terrain"
               //onIdle={handleMapLoad}
             >
@@ -841,6 +859,7 @@ const WalkerBoard = ({ onLogout }) => {
 
           <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>Logout</LogoutButton>
         </APIProvider>
+      )}
       </AppContainer>
     </ThemeProvider>
   );

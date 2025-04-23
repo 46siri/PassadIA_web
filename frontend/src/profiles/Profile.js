@@ -146,6 +146,8 @@ const ProfileModal = ({ onLogout }) => {
     const [showChangePhoto, setShowChangePhoto] = useState(false); 
     const [points, setPoints] = useState(0);
     const [level, setLevel] = useState([]);
+    const [avatarFile, setAvatarFile] = useState(null);
+
 
     const navigate = useNavigate();
 
@@ -229,7 +231,7 @@ const ProfileModal = ({ onLogout }) => {
         setError(null);
 
         try {
-            const response = await Axios.post('http://localhost:8080/updateProfile', {
+            const response = await Axios.post('http://localhost:8080/updateWalkerProfile', {
                 email,       
                 userId,
                 name,        
@@ -255,22 +257,35 @@ const ProfileModal = ({ onLogout }) => {
     };
 
     const handleChangePhoto = async () => {
-        setLoading(true);
+        console.log("handleChangePhoto called");
+        if (!avatarFile) {
+            setError("No file selected.");
+            return;
+        }
+    
+        const formData = new FormData();
+        formData.append("avatar", avatarFile);
+    
+        setUploading(true);
         setError(null);
         try {
-            console.log('Uploading photo...');
-            const response = await Axios.post('http://localhost:8080/changePhoto', {
-                avatarURL,
+            const response = await Axios.post("http://localhost:8080/changePhoto", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+                withCredentials: true
             });
+    
             if (response.status === 200) {
-                setSuccess('Photo updated successfully!');
+                setAvatarURL(response.data.avatarURL); // Atualiza o avatar na UI
+                setSuccess("Photo updated successfully!");
             }
         } catch (error) {
-            setError('Error updating photo: ' + error.message);
+            setError("Error updating photo: " + error.message);
         } finally {
-            setLoading(false);
+            setUploading(false);
         }
     };
+    
+          
     const handleDeleteAccount = async () => {
         try {
             if (!window.confirm("Are you sure you want to delete your account? This action is irreversible.")) {
@@ -354,12 +369,27 @@ const ProfileModal = ({ onLogout }) => {
                             style={{ cursor: 'pointer', position: 'relative' }}
                         />
                         <input
-                            accept="image/*"
-                            style={{ display: 'none' }}
-                            id="avatar-upload"
-                            type="file"
-                            onChange={handleChangePhoto} // Trigger file change
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id="avatar-upload"
+                        type="file"
+                        onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                            setAvatarFile(file);
+                            }
+                        }}
                         />
+                        {avatarFile && (
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={handleChangePhoto}
+                                style={{ marginTop: '10px' }}
+                            >
+                                Upload Photo
+                            </Button>
+                        )}
                         {showChangePhoto && (
                             <Button
                                 variant="flex"
@@ -367,7 +397,7 @@ const ProfileModal = ({ onLogout }) => {
                                 onClick={() => document.getElementById('avatar-upload').click()} // Button triggers file selection
                                 style={{
                                     position: 'absolute',
-                                    top: '43%',
+                                    top: '30%',
                                     left: '50%',
                                     transform: 'translate(-50%, -50%)',
                                     opacity: 0.8, // Slightly transparent to blend in with avatar

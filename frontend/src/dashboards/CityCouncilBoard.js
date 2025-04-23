@@ -67,8 +67,9 @@ const CityCouncilBoard = ({ onLogout }) => {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [geoJsonLoaded, setGeoJsonLoaded] = useState(false); 
   const [geoJsonInputType, setGeoJsonInputType] = useState('text');
-
+  const [googleApiKey, setGoogleApiKey] = useState(null);
   const [hasCenteredOnce, setHasCenteredOnce] = useState(false);
+  const [mapid, setMapId] = useState(null);
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -106,10 +107,25 @@ const CityCouncilBoard = ({ onLogout }) => {
   const handleClose = () => setAnchorEl(null);
   const handleLogoClick = () => navigate('/CityCouncilBoard');
   const handleCloseDialog = () => {
-    setIsMapLoaded(false); // Reset map load state to force reload
-    setGeojsonData(null);   // Clear GeoJSON data to ensure it reloads
+    setIsMapLoaded(false); 
+    setGeojsonData(null);  
     setSelectedMarker(null); // Clear the selected marker
   };
+
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const response = await Axios.get('http://localhost:8080/google-maps-key', { withCredentials: true });
+        const mapId = await Axios.get('http://localhost:8080/google-maps-mapID', { withCredentials: true });
+        setGoogleApiKey(response.data.apiKey);
+        setMapId(mapId.data.mapID);
+      } catch (err) {
+        console.error('Erro ao buscar a Google Maps API key:', err);
+      }
+    };
+  
+    fetchApiKey();
+  }, []);
   const handleMarkerClick = async (marker) => {
     if (marker?.id === undefined && marker?.walkwayId === undefined) return;
   
@@ -242,7 +258,7 @@ const CityCouncilBoard = ({ onLogout }) => {
       setSuccess('Walkway added and linked to your list successfully!');
       setError(null);
       setShowFormDialog(false);
-      
+
       setFormData({
         name: '',
         description: '',
@@ -391,7 +407,8 @@ const CityCouncilBoard = ({ onLogout }) => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AppContainer>
-        <APIProvider apiKey={'AIzaSyDwGfxyjM21tprpmkBXNI6HGIuwzvLsBgo'}>
+      {googleApiKey && (
+          <APIProvider apiKey={googleApiKey}>
           <Logo src={logo} alt="logo" onClick={handleLogoClick} />
           <MoreMenuButton aria-label="more" onClick={handleClick}>
             <MoreVertIcon />
@@ -404,7 +421,7 @@ const CityCouncilBoard = ({ onLogout }) => {
           <Map
               defaultZoom={10}
               defaultCenter={{ lat: 41.5564, lng: -8.16415 }}
-              mapId='5f6b01e0c09b0450'
+              mapId={mapid}
               mapTypeId="terrain"
               //onIdle={handleMapLoad}
             >
@@ -627,6 +644,7 @@ const CityCouncilBoard = ({ onLogout }) => {
           </Dialog>
           <LogoutButton variant="contained" color="secondary" onClick={handleLogOut}>Logout</LogoutButton>
         </APIProvider>
+        )}
       </AppContainer>
     </ThemeProvider>
   );

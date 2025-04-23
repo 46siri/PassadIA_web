@@ -699,16 +699,25 @@ app.get('/recommendHybridCascade', async (req, res) => {
         euclideanScores.forEach(w => {
             console.log(`   📈 ${w.name} – closest to "${w.closestTo}" – score: ${w.euclidean.toFixed(3)}`);
         });
+
         const useGeo = !isGeoDispersed(explored);
+
         if (useGeo) {
-            console.log("\n🌍 Geolocation refinement will be applied.");
+            if(euclideanScores.length === 1) {
+                console.log("⚠️ Only one walkway found, skipping geolocation refinement.");
+                return res.status(200).json(euclideanScores.slice(0, 4));
+            }
+            else{
+                console.log("\n🌍 Geolocation refinement will be applied.");
+            }
         } else {
             console.log("📏 Using pure Euclidean-based recommendation (no geo refinement).");
+            return res.status(200).json(euclideanScores.slice(0, 4));
         }
         const scored = useGeo
             ? refineByGeolocation(euclideanScores, explored)
             : euclideanScores.sort((a, b) => a.euclidean - b.euclidean);
-        
+
         console.log(`🔎 Scored recommendations (${scored.length}):`);
         scored.forEach(w => {
             const base = `→ ${w.name} (id: ${w.id})`;

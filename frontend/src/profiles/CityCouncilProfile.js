@@ -200,7 +200,7 @@ const CityCouncilProfile = ({ onLogout }) => {
         setError(null);
 
         try {
-            const response = await Axios.post('http://localhost:8080/updateProfile', {
+            const response = await Axios.post('http://localhost:8080/updateCityCouncilProfile', {
                 email,
                 userId,
                 institutionName,

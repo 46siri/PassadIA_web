@@ -3,18 +3,14 @@ const app = express.Router();
 const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
-const { UserCollection, auth, db, WalkwayCollection, InterestCollection, admin } = require('../firebase-config');
-const {sendSignInLinkToEmail, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, deleteUser, getUserByEmail } = require('firebase/auth');
-const { getStorage } = require("firebase/storage");
+const { UserCollection, auth, db, WalkwayCollection, InterestCollection, admin, storage } = require('../firebase-config');
+const {sendSignInLinkToEmail, createUserWithEmailAndPassword } = require('firebase/auth');
+const { ref, uploadBytes, getDownloadURL} = require("firebase/storage");
 const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion, deleteDoc} = require('firebase/firestore');
 const { c, u } = require('tar');
-// get markers from walkways/marker.json
-const markers = require('../walkways/markers.json');
 const multer = require('multer');
-const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
-const { v4: uuidv4 } = require('uuid'); // For unique file names
+const { v4: uuidv4 } = require('uuid'); 
 const upload = multer({ storage: multer.memoryStorage() });
-// create a global variable to store the user data
 let userData = {};
 
 //------------------------------- Get Users --------------------------------
@@ -100,44 +96,79 @@ app.post('/profileData', async (req, res) => {
     }
 });
 
-//------------------------------- Update Profile --------------------------------
-app.post('/updateProfile', async (req, res) => {
-    const { email } = req.body;
-
-    if (!email) {
-        return res.status(400).json({ error: 'Email is required to identify the user.' });
-    }
-
+//------------------------------- Update Profile CityCouncil--------------------------------
+app.post('/updateCityCouncilProfile', async (req, res) => {
     try {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email)); // Using the 'email' from req.body
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-            const docRef = querySnapshot.docs[0].ref;
-
-            // Create an object with only the fields provided in the request body
-            const updateData = {};
-            const allowedFields = ['userId', 'name', 'role', 'birthdate', 'height', 'weight', 'interests', 'bio'];
-            
-            allowedFields.forEach(field => {
-                if (req.body[field] !== undefined) {
-                    updateData[field] = req.body[field];
-                }
-            });
-
-            // Update the profile with only the fields present in updateData
-            await updateDoc(docRef, updateData);
-            res.status(200).json({ message: 'Profile updated' });
-            console.log('Profile updated for user:', email);
-        } else {
-            res.status(404).json({ error: 'User not found' });
+        const { email, userId, institutionName, role, registrationDate, positionType, location } = req.body;
+        if (!email) return res.status(400).json({ error: 'Missing email.' });
+        
+        const userQuery = query(UserCollection, where('email', '==', email));
+        const querySnapshot = await getDocs(userQuery);
+        
+        if (querySnapshot.empty) {
+          return res.status(404).json({ error: 'User with given email not found.' });
         }
+        const userDoc = querySnapshot.docs[0]; // Assume-se que o email é único
+        const userRef = doc(UserCollection, userDoc.id);
+  
+        await updateDoc(userRef, {
+            email,
+            userId,
+            institutionName,
+            role,
+            registrationDate,
+            positionType,
+            location 
+        });
+    
+        res.status(200).json({ message: 'Walker profile updated successfully.' });
     } catch (error) {
-        console.error('Error updating profile:', error);
-        res.status(500).json({ error: 'Error updating profile' });
+        console.error('Error updating Walker profile:', error);
+        res.status(500).json({ error: 'Failed to update Walker profile.' });
     }
 });
+
+  //------------------------------- Update Profile Walker--------------------------------
+  app.post('/updateWalkerProfile', async (req, res) => {
+    try {
+        const { email, name, role, birthdate, height, weight, bio, selectedInterests } = req.body;
+
+        if (!email) return res.status(400).json({ error: 'Missing email.' });
+        
+        const userQuery = query(UserCollection, where('email', '==', email));
+        const querySnapshot = await getDocs(userQuery);
+        
+        if (querySnapshot.empty) {
+          return res.status(404).json({ error: 'User with given email not found.' });
+        }
+        
+        const userDoc = querySnapshot.docs[0]; 
+        const userRef = doc(UserCollection, userDoc.id);
+        
+        const updates = {
+          name,
+          role,
+          birthdate,
+          height,
+          weight,
+          bio,
+          interests: selectedInterests,
+        };
+        
+        // Remover campos undefined
+        Object.keys(updates).forEach((key) => {
+          if (updates[key] === undefined) delete updates[key];
+        });
+        
+        await updateDoc(userRef, updates);
+        
+        res.status(200).json({ message: 'Walker profile updated successfully.' });        
+    } catch (error) {
+      console.error('Error updating Walker profile:', error);
+      res.status(500).json({ error: 'Failed to update Walker profile.' });
+    }
+  });
+  
 //------------------------------- Delete Account --------------------------------
 app.post('/deleteAccount', async (req, res) => {
     const email = req.session.user?.email;
@@ -189,34 +220,45 @@ app.get('/interests', async (req, res) => {
     }
 });
 //------------------------------- change photo -----------------------------------
-app.post('/changePhoto', async (req, res) => {
-    const {avatarURL } = req.body; // Certifique-se de enviar o email e o avatarURL no body da requisição.
+app.post('/changePhoto', upload.single('avatar'), async (req, res) => {
     const email = req.session.user?.email || userData.email;
-    if (!email || !avatarURL) {
-        return res.status(400).json({ error: 'Email and avatar URL are required' });
+
+    if (!email) {
+        return res.status(401).json({ error: 'User not authenticated.' });
+    }
+
+    if (!req.file) {
+        return res.status(400).json({ error: 'No avatar file uploaded.' });
     }
 
     try {
-        // Busque o documento do usuário no Firestore com base no email
+        // Criação da referência no Firebase Storage
+        const avatarFile = req.file;
+        const avatarRef = ref(storage, `avatars/${uuidv4()}_${avatarFile.originalname}`);
+        await uploadBytes(avatarRef, avatarFile.buffer);
+
+        // URL pública da imagem
+        const avatarURL = await getDownloadURL(avatarRef);
+
+        // Buscar documento do utilizador
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('email', '==', email));
-        const querySnapshot = await getDocs(q);
+        const snapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-            return res.status(404).json({ error: 'User not found' });
+        if (snapshot.empty) {
+            return res.status(404).json({ error: 'User not found.' });
         }
 
-        // Pegue a referência do primeiro documento encontrado (usuário)
-        const userDocRef = querySnapshot.docs[0].ref;
+        const userDocRef = snapshot.docs[0].ref;
 
-        // Atualize o campo avatarURL no documento do usuário
+        // Atualizar campo avatarURL
         await updateDoc(userDocRef, { avatarURL });
 
-        res.status(200).json({ message: 'Photo updated successfully' });
-        console.log('User photo updated for:', email);
+        res.status(200).json({ message: 'Photo updated successfully', avatarURL });
+        console.log(`📸 Avatar atualizado para ${email}`);
     } catch (error) {
-        console.error('Error updating photo:', error);
-        res.status(500).json({ error: 'Error updating photo' });
+        console.error('Erro ao atualizar a foto de perfil:', error);
+        res.status(500).json({ error: 'Erro ao atualizar a foto de perfil.' });
     }
 });
 

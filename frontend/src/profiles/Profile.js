@@ -256,7 +256,7 @@ const ProfileModal = ({ onLogout }) => {
         }
     };
 
-    const handleChangePhoto = async () => {
+    const handleChangePhoto = async (avatarFile) => {
         console.log("handleChangePhoto called");
         if (!avatarFile) {
             setError("No file selected.");
@@ -275,7 +275,14 @@ const ProfileModal = ({ onLogout }) => {
             });
     
             if (response.status === 200) {
-                setAvatarURL(response.data.avatarURL); // Atualiza o avatar na UI
+                const newAvatarURL = response.data.avatarURL;
+                setAvatarURL(newAvatarURL); 
+                setProfileData((prev) => ({
+                    ...prev,
+                    avatarURL: newAvatarURL,
+                })); 
+    
+                setAvatarFile(null); 
                 setSuccess("Photo updated successfully!");
             }
         } catch (error) {
@@ -284,6 +291,7 @@ const ProfileModal = ({ onLogout }) => {
             setUploading(false);
         }
     };
+    
     
           
     const handleDeleteAccount = async () => {
@@ -359,57 +367,67 @@ const ProfileModal = ({ onLogout }) => {
             <Grid2>
                 {/* Avatar Section */}
                 <Grid2 item xs={12} sm={5} style={{ textAlign: 'center' }} marginBottom={10}>
-                <Typography variant="h4" gutterBottom>{name}</Typography>
+                    <Typography variant="h4" gutterBottom>{name}</Typography>
                     <label htmlFor="avatar-upload">
-                        <AvatarStyled
-                            src={avatarURL}
-                            onClick={() => document.getElementById('avatar-upload').click()} // Make the avatar clickable
-                            onMouseEnter={() => setShowChangePhoto(true)} // Show button on hover
-                            onMouseLeave={() => setShowChangePhoto(false)} // Hide button when not hovering
-                            style={{ cursor: 'pointer', position: 'relative' }}
-                        />
-                        <input
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        id="avatar-upload"
-                        type="file"
-                        onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                            setAvatarFile(file);
-                            }
-                        }}
-                        />
-                        {avatarFile && (
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={handleChangePhoto}
-                                style={{ marginTop: '10px' }}
-                            >
-                                Upload Photo
-                            </Button>
-                        )}
-                        {showChangePhoto && (
-                            <Button
-                                variant="flex"
-                                color="grey"
-                                onClick={() => document.getElementById('avatar-upload').click()} // Button triggers file selection
-                                style={{
-                                    position: 'absolute',
-                                    top: '30%',
-                                    left: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    opacity: 0.8, // Slightly transparent to blend in with avatar
+                        <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <AvatarStyled
+                                src={avatarURL}
+                                onClick={() => document.getElementById('avatar-upload').click()} 
+                                onMouseEnter={() => setShowChangePhoto(true)} 
+                                onMouseLeave={() => setShowChangePhoto(false)}
+                                style={{ 
+                                    cursor: 'pointer',
+                                    opacity: uploading ? 0.5 : 1, // Deixar avatar meio transparente durante upload
+                                    transition: 'opacity 0.3s',
                                 }}
-                            >
-                                Change Photo
-                            </Button>
-                        )}
+                            />
+                            {showChangePhoto && !uploading && (
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={() => document.getElementById('avatar-upload').click()}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        opacity: 0.9,
+                                        backgroundColor: '#ffffff',
+                                        color: '#000000',
+                                    }}
+                                >
+                                    Change Photo
+                                </Button>
+                            )}
+                            {uploading && (
+                                <CircularProgress
+                                    size={60}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        marginTop: -30,
+                                        marginLeft: -30,
+                                    }}
+                                />
+                            )}
+                        </div>
+
+                        <input
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            id="avatar-upload"
+                            type="file"
+                            onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    handleChangePhoto(file);
+                                }
+                            }}
+                        />
                     </label>
-                    {uploading && <CircularProgress />}
-                    
                 </Grid2>
+
 
                 {/* Profile Information Section */}
                 <Grid2 container spacing={2}>
@@ -430,15 +448,15 @@ const ProfileModal = ({ onLogout }) => {
                                         labelId="interests-label"
                                         id="interests"
                                         multiple
-                                        value={selectedInterests} // Agora, seleciona múltiplos interesses
-                                        onChange={(e) => setSelectedInterests(e.target.value)} // Atualiza os interesses selecionados
+                                        value={selectedInterests} 
+                                        onChange={(e) => setSelectedInterests(e.target.value)} 
                                         renderValue={(selected) => selected
                                             .map((interestId) => {
                                                 const interest = interestsList.find(i => i.id === interestId);
                                                 return interest ? interest.name : null;
                                             })
                                             .filter(Boolean)
-                                            .join(', ')} // Mostra os interesses selecionados no campo de seleção
+                                            .join(', ')} 
                                     >
                                         {interestsList.map((interest) => (
                                             <MenuItem key={interest.id} value={interest.id}>

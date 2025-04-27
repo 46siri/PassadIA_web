@@ -197,7 +197,7 @@ app.get('/walkwayStatus', async (req, res) => {
           return res.json({ status: 'none' });
         }
       
-        const status = entry.finished ? 'completed' : 'planned';
+        const status = entry.finished ? 'completed' : 'started';
         const comment = entry.experience || null;
       
         res.json({ status, comment });

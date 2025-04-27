@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
+import { channel } from "process";
 
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
@@ -131,6 +132,8 @@ const CityCouncilProfile = ({ onLogout }) => {
     const [success, setSuccess] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [showChangePhoto, setShowChangePhoto] = useState(false); 
+    const [avatarFile, setAvatarFile] = useState(null);
+    
 
     const navigate = useNavigate();
 
@@ -223,23 +226,40 @@ const CityCouncilProfile = ({ onLogout }) => {
         }
     };
 
-    const handleChangePhoto = async () => {
-        setLoading(true);
+
+    const handleChangePhoto = async (avatarFile) => {
+        console.log("handleChangePhoto called");
+        if (!avatarFile) {
+            setError("No file selected.");
+            return;
+        }
+    
+        const formData = new FormData();
+        formData.append("avatar", avatarFile);
+    
+        setUploading(true);
         setError(null);
         try {
-            console.log('Uploading photo...');
-            const response = await Axios.post('http://localhost:8080/changePhoto', {
-                avatarURL,
-            },{
+            const response = await Axios.post("http://localhost:8080/changePhoto", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
                 withCredentials: true
-              });
+            });
+    
             if (response.status === 200) {
-                setSuccess('Photo updated successfully!');
+                const newAvatarURL = response.data.avatarURL;
+                setAvatarURL(newAvatarURL); 
+                setProfileData((prev) => ({
+                    ...prev,
+                    avatarURL: newAvatarURL,
+                })); 
+    
+                setAvatarFile(null); 
+                setSuccess("Photo updated successfully!");
             }
         } catch (error) {
-            setError('Error updating photo: ' + error.message);
+            setError("Error updating photo: " + error.message);
         } finally {
-            setLoading(false);
+            setUploading(false);
         }
     };
 
@@ -247,6 +267,7 @@ const CityCouncilProfile = ({ onLogout }) => {
     if (loading) {
         return <CircularProgress />;
     }
+
 
     return (
         <ThemeProvider theme={theme}>
@@ -289,42 +310,67 @@ const CityCouncilProfile = ({ onLogout }) => {
             <Grid2>
                 {/* Avatar Section */}
                 <Grid2 item xs={12} sm={5} style={{ textAlign: 'center' }} marginBottom={10}>
-                <Typography variant="h4" gutterBottom>{institutionName}</Typography>
+                    <Typography variant="h4" gutterBottom>{institutionName}</Typography>
                     <label htmlFor="avatar-upload">
-                        <AvatarStyled
-                            src={avatarURL}
-                            onClick={() => document.getElementById('avatar-upload').click()} // Make the avatar clickable
-                            onMouseEnter={() => setShowChangePhoto(true)} // Show button on hover
-                            onMouseLeave={() => setShowChangePhoto(false)} // Hide button when not hovering
-                            style={{ cursor: 'pointer', position: 'relative' }}
-                        />
+                        <div style={{ position: 'relative', display: 'inline-block' }}>
+                            <AvatarStyled
+                                src={avatarURL}
+                                onClick={() => document.getElementById('avatar-upload').click()} 
+                                onMouseEnter={() => setShowChangePhoto(true)} 
+                                onMouseLeave={() => setShowChangePhoto(false)}
+                                style={{ 
+                                    cursor: 'pointer',
+                                    opacity: uploading ? 0.5 : 1, // Deixar avatar meio transparente durante upload
+                                    transition: 'opacity 0.3s',
+                                }}
+                            />
+                            {showChangePhoto && !uploading && (
+                                <Button
+                                    variant="contained"
+                                    size="small"
+                                    onClick={() => document.getElementById('avatar-upload').click()}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        opacity: 0.9,
+                                        backgroundColor: '#ffffff',
+                                        color: '#000000',
+                                    }}
+                                >
+                                    Change Photo
+                                </Button>
+                            )}
+                            {uploading && (
+                                <CircularProgress
+                                    size={60}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        marginTop: -30,
+                                        marginLeft: -30,
+                                    }}
+                                />
+                            )}
+                        </div>
+
                         <input
                             accept="image/*"
                             style={{ display: 'none' }}
                             id="avatar-upload"
                             type="file"
-                            onChange={handleChangePhoto} // Trigger file change
+                            onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                    handleChangePhoto(file); 
+                                }
+                            }}
                         />
-                        {showChangePhoto && (
-                            <Button
-                                variant="flex"
-                                color="grey"
-                                onClick={() => document.getElementById('avatar-upload').click()} // Button triggers file selection
-                                style={{
-                                    position: 'absolute',
-                                    top: '43%',
-                                    left: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    opacity: 0.8, // Slightly transparent to blend in with avatar
-                                }}
-                            >
-                                Change Photo
-                            </Button>
-                        )}
                     </label>
-                    {uploading && <CircularProgress />}
-                    
                 </Grid2>
+
 
                 {/* Profile Information Section */}
                 <Grid2 container spacing={2}>

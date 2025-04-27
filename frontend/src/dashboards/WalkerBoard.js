@@ -98,7 +98,7 @@ const WalkerBoard = ({ onLogout }) => {
   const [topLikedWalkways, setTopLikedWalkways] = useState([]);
   const [topExploredWalkways, setTopExploredWalkways] = useState([]);
   const [recommendedWalkways, setRecommendedWalkways] = useState([]);
-  const [isPlanned, setIsPlanned] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [comment, setComment] = useState('');
   const [storedComment, setStoredComment] = useState(null);
@@ -339,22 +339,22 @@ const WalkerBoard = ({ onLogout }) => {
     if (entry) {
       if (entry.finished) {
         setIsCompleted(true);
-        setIsPlanned(false);
+        setIsStarted(false);
         setStoredComment(entry.experience || null);
       } else {
         setIsCompleted(false);
-        setIsPlanned(true);
+        setIsStarted(true);
         setStoredComment(null);
       }
     } else {
       setIsCompleted(false);
-      setIsPlanned(false);
+      setIsStarted(false);
       setStoredComment(null);
     }
   };
 
   //--------------------- Event Walk Handlers ---------------------//
-  const handlePlanWalk = async () => {
+  const handleStartWalk = async () => {
     try {
       const response = await Axios.post("http://localhost:8080/addWalkwayHistory", {
         walkwayId: selectedMarker.id,
@@ -382,8 +382,8 @@ const WalkerBoard = ({ onLogout }) => {
       updateHistoryEntry(newEntry);
   
       // Atualiza estados da interface
-      setSuccess("Walk planned successfully!");
-      setIsPlanned(true);
+      setSuccess("Walk started!");
+      setIsStarted(true);
       setIsCompleted(false);
       setStoredComment(null);
   
@@ -391,7 +391,7 @@ const WalkerBoard = ({ onLogout }) => {
       updateMarkerState([...userHistory, newEntry], selectedMarker);
   
     } catch (error) {
-      setError("Failed to plan the walk: " + error.message);
+      setError("Failed to start the walk: " + error.message);
     }
   };
   
@@ -419,7 +419,7 @@ const WalkerBoard = ({ onLogout }) => {
         experience: storedComment || ""
       });
       setSuccess("Walk successfully added to your history!");
-      setIsPlanned(false);
+      setIsStarted(false);
       setIsCompleted(true);
       setComment(''); // limpa o campo após submissão
     } catch (err) {
@@ -451,11 +451,11 @@ const WalkerBoard = ({ onLogout }) => {
   
       if (status === 'completed') {
         setIsCompleted(true);
-        setIsPlanned(false);
+        setIsStarted(false);
         setStoredComment(comment);
-      } else if (status === 'planned') {
+      } else if (status === 'started') {
         setIsCompleted(false);
-        setIsPlanned(true);
+        setIsStarted(true);
         setStoredComment(null);
       } 
   
@@ -683,7 +683,7 @@ const WalkerBoard = ({ onLogout }) => {
                       ))}
                     </>
                   )}
-                  {selectedMarker && isCompleted && !isPlanned && (
+                  {selectedMarker && isCompleted && !isStarted && (
                     <>
                       <Typography gutterBottom style={{ marginTop: 16 }}><strong>Leave a comment about your experience:</strong></Typography>
                       <textarea
@@ -738,32 +738,32 @@ const WalkerBoard = ({ onLogout }) => {
                 {success && <div style={{ color: "green" }}>{success}</div>}
               </div>
 
-              {/* Regra: Se o percurso já foi concluído, mostra apenas "Plan to walk again" */}
+              {/* Regra: Se o percurso já foi concluído, mostra apenas "Start to walk again" */}
               {selectedMarker && isCompleted && (
                 <Button
                   variant="outlined"
                   color="secondary"
                   startIcon={<DirectionsWalkIcon />}
-                  onClick={handlePlanWalk}
+                  onClick={handleStartWalk}
                 >
-                  Plan to walk again
+                  Start to walk again
                 </Button>
               )}
 
-              {/* Se nunca foi planeado nem concluído */}
-              {selectedMarker && !isPlanned && !isCompleted && (
+              {/* Se nunca foi começado nem concluído */}
+              {selectedMarker && !isStarted && !isCompleted && (
                 <Button
                   variant="contained"
                   color="secondary"
                   startIcon={<DirectionsWalkIcon />}
-                  onClick={handlePlanWalk}
+                  onClick={handleStartWalk}
                 >
-                  Plan this walk
+                  Start this walk
                 </Button>
               )}
 
-              {/* Se está planeado mas ainda não concluído */}
-              {selectedMarker && isPlanned && !isCompleted && (
+              {/* Se está começado mas ainda não concluído */}
+              {selectedMarker && isStarted && !isCompleted && (
                 <Button
                   variant="contained"
                   color="primary"

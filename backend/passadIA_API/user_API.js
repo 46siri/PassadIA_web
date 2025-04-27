@@ -221,7 +221,7 @@ app.get('/interests', async (req, res) => {
 });
 //------------------------------- change photo -----------------------------------
 app.post('/changePhoto', upload.single('avatar'), async (req, res) => {
-    const email = req.session.user?.email || userData.email;
+    const email = req.session.user?.email;
 
     if (!email) {
         return res.status(401).json({ error: 'User not authenticated.' });
@@ -233,6 +233,7 @@ app.post('/changePhoto', upload.single('avatar'), async (req, res) => {
 
     try {
         // Criação da referência no Firebase Storage
+        console.log('File received:', req.file);
         const avatarFile = req.file;
         const avatarRef = ref(storage, `avatars/${uuidv4()}_${avatarFile.originalname}`);
         await uploadBytes(avatarRef, avatarFile.buffer);
@@ -255,7 +256,7 @@ app.post('/changePhoto', upload.single('avatar'), async (req, res) => {
         await updateDoc(userDocRef, { avatarURL });
 
         res.status(200).json({ message: 'Photo updated successfully', avatarURL });
-        console.log(`📸 Avatar atualizado para ${email}`);
+        console.log(`Avatar atualizado para ${email}`);
     } catch (error) {
         console.error('Erro ao atualizar a foto de perfil:', error);
         res.status(500).json({ error: 'Erro ao atualizar a foto de perfil.' });

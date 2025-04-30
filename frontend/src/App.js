@@ -3,13 +3,11 @@ import Axios from "axios";
 import { Button, Container, CssBaseline, Typography, Paper, ThemeProvider } from '@mui/material';
 import { styled } from '@mui/system';
 import theme from './Theme/theme';
-import GoogleLogo from './Theme/google-logo.svg';
 import logo from './Theme/images/baselogo.jpg';
 import SignInModal from './auth/SignIn';
 import SignUpModal from './auth/SignUp';
 
 
-// Usando o novo sistema de estilo com 'styled'
 const AppContainer = styled(Container)(({ theme }) => ({
   ...theme.root,
 }));
@@ -49,14 +47,6 @@ const App = () => {
     setData(response.data);
   };
 
-  const handleGoogleSignUp = async () => {
-    try {
-      // Abrir uma nova janela para redirecionar para o endpoint de autenticação do backend
-      window.location.href = "http://localhost:8080/auth/google";
-    } catch (error) {
-      setError(error);
-    }
-  };
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const openSignInModal = () => {
     setIsSignInModalOpen(true);
@@ -79,9 +69,6 @@ const App = () => {
 
 
 
-
-
-
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -94,12 +81,6 @@ const App = () => {
           <MedSizePhrase variant="h5">
             Register to start your journey.
           </MedSizePhrase>
-          <div>
-          <Button variant="contained" color="google" onClick={handleGoogleSignUp} startIcon={<img src={GoogleLogo} alt="Google Logo" />}>
-            Sign up with Google
-          </Button>
-          </div>
-          <Typography variant="body2">_________ OR __________</Typography>
           <div>
             <Button variant="contained" color="primary" onClick={openSignUpModal}>
               Create an account

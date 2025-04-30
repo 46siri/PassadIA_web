@@ -17,16 +17,15 @@ import { useNavigate } from 'react-router-dom';
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
 
-// Styled components using MUI's new styled API
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
-    backgroundColor: '#ffffff', // Alterado de #f5f5f5 para branco puro
+    backgroundColor: '#ffffff', 
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'column', // adiciona para alinhar conteúdo verticalmente
+    flexDirection: 'column', 
     paddingTop: theme.spacing(4),
   }));
   
@@ -132,7 +131,6 @@ const ProfileModal = ({ onLogout }) => {
     const [birthdate, setBirthdate] = useState('');
     const [height, setHeight] = useState('');
     const [weight, setWeight] = useState('');
-    const [interests, setInterests] = useState('');
     const [bio, setBio] = useState('');
     const [avatarURL, setAvatarURL] = useState('');
     const [error, setError] = useState('');
@@ -141,8 +139,8 @@ const ProfileModal = ({ onLogout }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [success, setSuccess] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const [interestsList, setInterestsList] = useState([]); // List of interests fetched from backend
-    const [selectedInterests, setSelectedInterests] = useState([]); // List of selected interests
+    const [interestsList, setInterestsList] = useState([]); 
+    const [selectedInterests, setSelectedInterests] = useState([]); 
     const [showChangePhoto, setShowChangePhoto] = useState(false); 
     const [points, setPoints] = useState(0);
     const [level, setLevel] = useState([]);
@@ -151,7 +149,6 @@ const ProfileModal = ({ onLogout }) => {
 
     const navigate = useNavigate();
 
-    // Handle Logout
     const handleLogOut = async () => {
         setError(null);
         setSuccess(null);
@@ -174,7 +171,6 @@ const ProfileModal = ({ onLogout }) => {
 
     };
 
-    // Menu Handlers 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
@@ -319,7 +315,6 @@ const ProfileModal = ({ onLogout }) => {
             <CssBaseline />
             <AppContainer>
             <Logo src={logo} alt="logo" onClick={handleLogoClick} />
-            {/* Nível e Pontos */}
             <LevelContainer>
             <Typography variant="body1" style={{ marginTop: '10px' }}>
                 🏅 <strong>Level:</strong> {level.level}
@@ -365,7 +360,6 @@ const ProfileModal = ({ onLogout }) => {
             </Menu>
 
             <Grid2>
-                {/* Avatar Section */}
                 <Grid2 item xs={12} sm={5} style={{ textAlign: 'center' }} marginBottom={10}>
                     <Typography variant="h4" gutterBottom>{name}</Typography>
                     <label htmlFor="avatar-upload">
@@ -377,7 +371,7 @@ const ProfileModal = ({ onLogout }) => {
                                 onMouseLeave={() => setShowChangePhoto(false)}
                                 style={{ 
                                     cursor: 'pointer',
-                                    opacity: uploading ? 0.5 : 1, // Deixar avatar meio transparente durante upload
+                                    opacity: uploading ? 0.5 : 1, 
                                     transition: 'opacity 0.3s',
                                 }}
                             />
@@ -429,7 +423,6 @@ const ProfileModal = ({ onLogout }) => {
                 </Grid2>
 
 
-                {/* Profile Information Section */}
                 <Grid2 container spacing={2}>
                     <CardStyled>
                         {isEditing ? (
@@ -472,7 +465,6 @@ const ProfileModal = ({ onLogout }) => {
                         ) : (
                             <CardContent>
                                 <Grid2 container spacing={2} size={12}>
-                                    {/* Left Column */}
                                     <Grid2 item xs={12} sm={6}>
                                         <Typography variant="body1">
                                             <AccountCircleIcon/> <strong>User Id:</strong> {userId}
@@ -491,7 +483,6 @@ const ProfileModal = ({ onLogout }) => {
                                         </Typography>
                                     </Grid2>
 
-                                    {/* Right Column */}
                                     <Grid2 item xs={12} sm={6}>
                                         <Typography variant="body1">
                                             <AccountCircleIcon /> <strong>Name:</strong> {name}

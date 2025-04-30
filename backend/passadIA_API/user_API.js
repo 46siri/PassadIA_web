@@ -51,13 +51,12 @@ app.get('/user', async (req, res) => {
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-            // Get the first document found
             const userDoc = querySnapshot.docs[0];
             const userData = userDoc.data();
             
             res.status(200).json({
-                id: userDoc.id,  // Include document ID if needed
-                ...userData      // Include all user fields from Firestore
+                id: userDoc.id, 
+                ...userData      
             });
             console.log('User data fetched:', userData);
         } else {
@@ -108,7 +107,7 @@ app.post('/updateCityCouncilProfile', async (req, res) => {
         if (querySnapshot.empty) {
           return res.status(404).json({ error: 'User with given email not found.' });
         }
-        const userDoc = querySnapshot.docs[0]; // Assume-se que o email é único
+        const userDoc = querySnapshot.docs[0]; 
         const userRef = doc(UserCollection, userDoc.id);
   
         await updateDoc(userRef, {
@@ -155,7 +154,6 @@ app.post('/updateCityCouncilProfile', async (req, res) => {
           interests: selectedInterests,
         };
         
-        // Remover campos undefined
         Object.keys(updates).forEach((key) => {
           if (updates[key] === undefined) delete updates[key];
         });
@@ -187,14 +185,11 @@ app.post('/deleteAccount', async (req, res) => {
 
         const userDoc = snapshot.docs[0];
 
-        // Elimina do Firestore
         await deleteDoc(userDoc.ref);
 
-        // Elimina da Auth via Admin SDK
         const userRecord = await admin.auth().getUserByEmail(email);
         await admin.auth().deleteUser(userRecord.uid);
 
-        // Termina sessão
         req.session.destroy(() => {
             res.clearCookie('connect.sid');
             res.status(200).json({ message: 'Account deleted successfully.' });
@@ -232,16 +227,13 @@ app.post('/changePhoto', upload.single('avatar'), async (req, res) => {
     }
 
     try {
-        // Criação da referência no Firebase Storage
         console.log('File received:', req.file);
         const avatarFile = req.file;
         const avatarRef = ref(storage, `avatars/${uuidv4()}_${avatarFile.originalname}`);
         await uploadBytes(avatarRef, avatarFile.buffer);
 
-        // URL pública da imagem
         const avatarURL = await getDownloadURL(avatarRef);
 
-        // Buscar documento do utilizador
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('email', '==', email));
         const snapshot = await getDocs(q);
@@ -252,7 +244,6 @@ app.post('/changePhoto', upload.single('avatar'), async (req, res) => {
 
         const userDocRef = snapshot.docs[0].ref;
 
-        // Atualizar campo avatarURL
         await updateDoc(userDocRef, { avatarURL });
 
         res.status(200).json({ message: 'Photo updated successfully', avatarURL });
@@ -388,12 +379,9 @@ app.post('/approveCityCouncil', async (req, res) => {
 
         const userDocRef = snapshot.docs[0].ref;
 
-        // Atualiza o estado para "approved"
         await updateDoc(userDocRef, { status: 'approved' });
 
-        // Envia link de login por email
         const actionCodeSettings = {
-            url: 'http://localhost:3000/login', // ou a página real da tua app
             handleCodeInApp: true
         };
 

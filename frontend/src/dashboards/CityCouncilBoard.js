@@ -15,7 +15,6 @@ import { useNavigate } from 'react-router-dom';
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
 
-// Styled components using MUI's new styled API
 const AppContainer = styled(Container)(({ theme }) => ({
   ...theme.root,
   zIndex: 9999,
@@ -109,7 +108,7 @@ const CityCouncilBoard = ({ onLogout }) => {
   const handleCloseDialog = () => {
     setIsMapLoaded(false); 
     setGeojsonData(null);  
-    setSelectedMarker(null); // Clear the selected marker
+    setSelectedMarker(null); 
   };
 
   useEffect(() => {
@@ -399,7 +398,7 @@ const CityCouncilBoard = ({ onLogout }) => {
     }
   }, [selectedMarker]);
   useEffect(() => {
-    setHasCenteredOnce(false); // Recentrar no próximo load
+    setHasCenteredOnce(false); 
   }, [selectedMarker]);
   
 
@@ -423,7 +422,6 @@ const CityCouncilBoard = ({ onLogout }) => {
               defaultCenter={{ lat: 41.5564, lng: -8.16415 }}
               mapId={mapid}
               mapTypeId="terrain"
-              //onIdle={handleMapLoad}
             >
               {transformedMarkers.map((marker) => (
                 <AdvancedMarker
@@ -590,7 +588,6 @@ const CityCouncilBoard = ({ onLogout }) => {
                   type="text"
                   value={formData.specifics.distance}
                   onChange={(e) => {
-                    // Convert commas to dots for parsing, but keep the display with commas
                     const value = e.target.value.replace(',', '.');
                     if (/^\d*(,\d{0,2})?$/.test(e.target.value) || value === '') {
                       setFormData((prev) => ({
@@ -619,7 +616,7 @@ const CityCouncilBoard = ({ onLogout }) => {
                     style={{
                       padding: '18px',
                       borderRadius: '4px',
-                      fontSize: '1.1rem' // aumenta o tamanho da letra
+                      fontSize: '1.1rem' 
                     }}
                   >
                     <option value="false" style={{ fontSize: '1.1rem' }}>No</option>

@@ -3,23 +3,21 @@ import Axios from "axios";
 import { Avatar, Button, Container, CssBaseline, IconButton, Typography, Menu, MenuItem, Grid2, CircularProgress, TextField, Card, CardContent, Paper, ThemeProvider } from '@mui/material';
 import { styled, textAlign } from '@mui/system';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useNavigate } from 'react-router-dom';
 
 
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
 
-// Styled components using MUI's new styled API
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
-    backgroundColor: '#ffffff', // Alterado de #f5f5f5 para branco puro
+    backgroundColor: '#ffffff', 
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'column', // adiciona para alinhar conteúdo verticalmente
+    flexDirection: 'column', 
     paddingTop: theme.spacing(4),
   }));
 
@@ -41,9 +39,9 @@ export const AvatarStyled = styled(Avatar)(({ theme }) => ({
 export const FormField = styled(TextField)(({ theme }) => ({
     marginBottom: theme.spacing(2),
     display: 'flex',
-    width: '100%', // Ensures the form field takes the full width of its container
-    maxWidth: '500px', // Set a maximum width to make the form smaller on larger screens
-    alignSelf: 'center', // Centers the form field horizontally
+    width: '100%', 
+    maxWidth: '500px', 
+    alignSelf: 'center', 
 }));
 
 
@@ -97,17 +95,14 @@ const MoreMenuButton = styled(IconButton)(({ theme }) => ({
 const History = ({ onLogout }) => {
     const [visitedLocations, setVisitedLocations] = useState(null);
     const [error, setError] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [anchorEl, setAnchorEl] = useState(null);
     const [success, setSuccess] = useState(null);
-    const [uploading, setUploading] = useState(false);
     const [role, setRole] = useState(null);
 
     const navigate = useNavigate();
 
     
-    // Handle Logout
     const handleLogOut = async () => {
         setError(null);
         setSuccess(null);
@@ -127,7 +122,6 @@ const History = ({ onLogout }) => {
         }
     };
 
-    // Menu Handlers 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
@@ -240,7 +234,6 @@ const History = ({ onLogout }) => {
                     <CardStyled>
                         <CardContent>
                         <Grid2 container spacing={2} columns={16}>
-                            {/* Coluna esquerda: nome + imagem */}
                             <Grid2 size={8}>
                             <Typography variant="h6" component="h2">
                                 <strong>{location.walkwayName}</strong>
@@ -252,7 +245,6 @@ const History = ({ onLogout }) => {
                             />
                             </Grid2>
 
-                            {/* Coluna direita: detalhes */}
                             <Grid2 size={8}>
                             <Typography variant="body2" color="textSecondary" sx={{ fontSize: '1rem', marginTop: '100px' }}>
                                 🚶‍♂️ <strong>Started:</strong> {new Date(location.startDate).toLocaleString()}

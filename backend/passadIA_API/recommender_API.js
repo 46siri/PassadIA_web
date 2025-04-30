@@ -4,17 +4,14 @@ const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
 const { UserCollection, auth, db, WalkwayCollection, InterestCollection } = require('../firebase-config');
-const {sendSignInLinkToEmail, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } = require('firebase/auth');
 const { getStorage } = require("firebase/storage");
 const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion} = require('firebase/firestore');
 const { c, u } = require('tar');
-// get markers from walkways/marker.json
 const markers = require('../walkways/markers.json');
 const multer = require('multer');
 const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
-const { v4: uuidv4 } = require('uuid'); // For unique file names
+const { v4: uuidv4 } = require('uuid'); 
 const upload = multer({ storage: multer.memoryStorage() });
-// create a global variable to store the user data
 let userData = {};
 
 //------------------------------- Global Recommendations ---------------------------------
@@ -25,7 +22,6 @@ app.get('/topWalkways', async (req, res) => {
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const walkwaysSnapshot = await getDocs(collection(db, 'walkways'));
 
-        // Criar mapa: walkwayId numérico => doc.id
         const walkwayIdMap = {};
         walkwaysSnapshot.docs.forEach(doc => {
             const data = doc.data();
@@ -39,12 +35,10 @@ app.get('/topWalkways', async (req, res) => {
         usersSnapshot.forEach((userDoc) => {
             const userData = userDoc.data();
 
-            // Contar favoritos (já vêm como doc.id)
             (userData.favorites || []).forEach(docId => {
                 walkwayLikes[docId] = (walkwayLikes[docId] || 0) + 1;
             });
 
-            // Contar históricos (têm walkwayId numérico, vamos converter)
             (userData.history || []).forEach(entry => {
                 const docId = walkwayIdMap[entry.walkwayId];
                 if (docId) {
@@ -53,7 +47,6 @@ app.get('/topWalkways', async (req, res) => {
             });
         });
 
-        // Ordenar e buscar os top 3
         const sortedWalkways = Object.entries(walkwayLikes)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 3)
@@ -87,14 +80,13 @@ app.get('/topLikedWalkways', async (req, res) => {
 
         const sorted = Object.entries(likeCounts)
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 4) // ← limit 4
+            .slice(0, 4) 
             .map(([docId, count]) => {
                 const doc = walkwaysSnapshot.docs.find(d => d.id === docId);
                 return doc ? { id: docId, ...doc.data(), count } : null;
             })
             .filter(Boolean);
         
-            //console.log('Top liked walkways:', sorted.map(w => ({ id: w.id, count: w.count })));
         res.status(200).json({ topLikedWalkways: sorted });
     } catch (error) {
         console.error('Error fetching top liked walkways:', error);
@@ -131,14 +123,13 @@ app.get('/topExploredWalkways', async (req, res) => {
 
         const sorted = Object.entries(historyCounts)
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 4) // ← limit 4
+            .slice(0, 4)
             .map(([docId, count]) => {
                 const doc = walkwaysSnapshot.docs.find(d => d.id === docId);
                 return doc ? { id: docId, ...doc.data(), count } : null;
             })
             .filter(Boolean);
 
-        //console.log('Top explored walkways:', sorted.map(w => ({ id: w.id, count: w.count })));
         res.status(200).json({ topExploredWalkways: sorted });
     } catch (error) {
         console.error('Error fetching top explored walkways:', error);
@@ -152,7 +143,7 @@ app.get('/topExploredWalkways', async (req, res) => {
 //------------------------------- Parse Distance --------------------------------
 const parseDistance = (distanceStr) => {
     if (typeof distanceStr === 'string') {
-      const match = distanceStr.match(/[\d.]+/); // extrai número
+      const match = distanceStr.match(/[\d.]+/);
       return match ? parseFloat(match[0]) : 0;
     }
     return typeof distanceStr === 'number' ? distanceStr : 0;
@@ -161,7 +152,7 @@ const parseDistance = (distanceStr) => {
 const normalize = (vector) => {
     const magnitude = Math.sqrt(vector.distance ** 2 + vector.difficulty ** 2);
     if (magnitude === 0) {
-        return { distance: 0, difficulty: 0 }; // evita divisão por zero
+        return { distance: 0, difficulty: 0 }; 
     }
     return {
         distance: vector.distance / magnitude,
@@ -194,7 +185,7 @@ function getExploredDocIds(history, favorites, walkwayIdMap) {
 //-------------------------------- Collaborative Filtering --------------------------------
 //--------------------------------- Jaccard Similarity --------------------------------
 function jaccardSimilarity(setA, setB) {
-    if (!Array.isArray(setA) || !Array.isArray(setB)) return 0; // verifica se são arrays
+    if (!Array.isArray(setA) || !Array.isArray(setB)) return 0; 
 
     const intersection = setA.filter(value => setB.includes(value)).length;
     const union = new Set([...setA, ...setB]).size;
@@ -232,7 +223,7 @@ async function findSimilarUsers(email, minSimilarity = null, usersSnapshot = nul
 
     if (minSimilarity === null) {
         minSimilarity = calculateAverageSimilarity(targetInterests, otherUsers);
-        console.log(`📊 Limiar dinâmico de similaridade definido em: ${minSimilarity.toFixed(3)}`);
+        console.log(`Limiar dinâmico de similaridade definido em: ${minSimilarity.toFixed(3)}`);
     }
 
     return usersSnapshot.docs
@@ -267,7 +258,6 @@ async function findSimilarUsers(email, minSimilarity = null, usersSnapshot = nul
 async function recommendCollaborative(email, minSimilarity = null) {
     console.log(`\nRecommending walkways for user: ${email} with minimum similarity: ${minSimilarity}`);
 
-    // Pré-carregar os dados necessários
     const usersSnapshot = await getDocs(UserCollection);
     const walkwaysSnapshot = await getDocs(WalkwayCollection);
 
@@ -306,7 +296,6 @@ async function recommendCollaborative(email, minSimilarity = null) {
         });
     });
 
-    // Obter os documentos reais dos passadiços recomendados
     const recommendedWalkways = walkwaysSnapshot.docs
         .filter(doc => recommendedWalkwayIds.has(doc.id))
         .map(doc => ({ id: doc.id, ...doc.data() }));
@@ -333,7 +322,7 @@ app.get('/recommendedCollaborativeWalkways', async (req, res) => {
         return res.status(200).json({ recommendations: recommended.slice(0, 4) });
 
     } catch (error) {
-        console.error('❌ Error in /recommendedCollaborativeWalkways:', error);
+        console.error(' Error in /recommendedCollaborativeWalkways:', error);
         return res.status(500).json({ error: 'Internal server error while recommending walkways.' });
     }
 });
@@ -350,7 +339,7 @@ const euclideanDistance = (a, b) => {
 //------------------------------- Haversine Distance --------------------------------
 const haversine = (lat1, lon1, lat2, lon2) => {
     const toRad = deg => deg * Math.PI / 180;
-    const R = 6371; // km
+    const R = 6371; 
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
     const a = Math.sin(dLat / 2) ** 2 +
@@ -367,16 +356,14 @@ function mergeUniqueById(primaryList, secondaryList) {
 //------------------------------- Get Explored for Comparison --------------------------------
 function getExploredForComparison(history, favorites) {
     const historyIds = new Set(history.map(h => h.id));
-    const filteredFavorites = favorites.filter(fav => !historyIds.has(fav.id)); // só favoritos não explorados
-    return [...history, ...filteredFavorites]; // usados para comparar
+    const filteredFavorites = favorites.filter(fav => !historyIds.has(fav.id)); 
+    return [...history, ...filteredFavorites]; 
 }
-
 
 //------------------------------- Recommend by Euclidean --------------------------------
 const recommendByEuclidean = (history, favorites, allSystemWalkways) => {
     console.log("\n📌 Starting Euclidean-based recommendation");
 
-    // Set of IDs from user history
     const historicIds = new Set(history.map(h => h.id));
 
     console.log(`📜 User history includes ${history.length} walkway(s):`);
@@ -384,28 +371,24 @@ const recommendByEuclidean = (history, favorites, allSystemWalkways) => {
         console.log(`   • ${h.name} (id: ${h.id})`);
     });
 
-    // Favorites that are not in history
     const favoritesNotInHistory = favorites.filter(fav => !historicIds.has(fav.id));
     console.log(`⭐ Favorites not in history (${favoritesNotInHistory.length}):`);
     favoritesNotInHistory.forEach(f => {
         console.log(`   • ${f.name} (id: ${f.id})`);
     });
 
-    // Unexplored walkways from the system
     const unexplored = allSystemWalkways.filter(w => !historicIds.has(w.id));
     console.log(`📂 Unexplored walkways from the system (${unexplored.length}):`);
     unexplored.forEach(w => {
         console.log(`   • ${w.name} (id: ${w.id})`);
     });
 
-    // Combine history and favorites (no duplicates) for comparison
     const allExploredForComparison = getExploredForComparison(history, favorites);
     console.log(`🔎 Walkways used for comparison (${allExploredForComparison.length}):`);
     allExploredForComparison.forEach(w => {
         console.log(`   • ${w.name} (id: ${w.id})`);
     });
 
-    // Normalize all explored walkways
     const normExplored = allExploredForComparison
         .filter(w => w.specifics && typeof w.specifics.difficulty === 'number')
         .map(w => {
@@ -417,11 +400,9 @@ const recommendByEuclidean = (history, favorites, allSystemWalkways) => {
         });
     console.log(`📐 Normalized explored walkways: ${normExplored.length}`);
 
-    // Combine unexplored with not-walked favorites for scoring
     const allToCompare = mergeUniqueById(unexplored, favoritesNotInHistory);
     console.log(`📊 Total walkways to compare: ${allToCompare.length}`);
 
-    // Score each unexplored walkway by comparing to explored ones
     const results = allToCompare
         .filter(w => w.specifics && typeof w.specifics.difficulty === 'number')
         .map(w => {
@@ -451,7 +432,7 @@ const recommendByEuclidean = (history, favorites, allSystemWalkways) => {
             };
         });
 
-    console.log(`✅ Euclidean recommendation completed with ${results.length} result(s).\n`);
+    console.log(` Euclidean recommendation completed with ${results.length} result(s).\n`);
     return results;
 };
 
@@ -528,7 +509,7 @@ const refineByGeolocation = (recommended, explored) => {
                 distance: closestDistance
             };
         })
-        .filter(Boolean); // remove os undefined ou null
+        .filter(Boolean); 
 
     if (allDistances.length === 0) return recommended;
 
@@ -565,10 +546,8 @@ async function getExplorationContext(email) {
     const historyIds = rawHistory.map(h => h.walkwayId);
     const favoriteIds = rawFavorites.map(f => typeof f === 'number' ? f : firestoreIdToNumeric[f]);
 
-    // 🛠️ Mapear history para objetos completos
     const history = allWalkways.filter(w => historyIds.includes(w.id));
     
-    // 🛠️ Mapear favorites para objetos completos
     const favorites = allWalkways.filter(w => favoriteIds.includes(w.id));
 
     const explored = allWalkways.filter(w => exploredDocIds.has(w.docId));

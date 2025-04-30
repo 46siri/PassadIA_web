@@ -4,22 +4,19 @@ const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
 const { UserCollection, auth, db, WalkwayCollection, InterestCollection } = require('../firebase-config');
-const {sendSignInLinkToEmail, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } = require('firebase/auth');
 const { getStorage } = require("firebase/storage");
 const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion} = require('firebase/firestore');
 const { c, u } = require('tar');
-// get markers from walkways/marker.json
 const markers = require('../walkways/markers.json');
 const multer = require('multer');
 const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
-const { v4: uuidv4 } = require('uuid'); // For unique file names
+const { v4: uuidv4 } = require('uuid'); 
 const upload = multer({ storage: multer.memoryStorage() });
-// create a global variable to store the user data
 let userData = {};
 
 //------------------------------- add location and date to history --------------------------------
 app.post('/addHistory', async (req, res) => {
-    const { locationId, startDate } = req.body; // Ensure `startDate` is included in the request body
+    const { locationId, startDate } = req.body; 
     const email = req.session.user?.email || userData.email;
 
     if (!email) {
@@ -27,40 +24,30 @@ app.post('/addHistory', async (req, res) => {
     }
 
     try {
-        // Get the user's document reference by querying the collection with the email
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email)); // Query to find user document
+        const q = query(usersRef, where('email', '==', email)); 
         const querySnapshot = await getDocs(q);
 
-        // Check if the user document exists
         if (querySnapshot.empty) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Get the first matching document reference
         const userDocRef = querySnapshot.docs[0].ref;
 
-        // Get current history or initialize an empty array
         const userData = querySnapshot.docs[0].data();
         const history = userData.history || [];
 
-        // Query the 'walkways' collection to find a document where the 'id' field matches the locationId
         const locationQuery = query(collection(db, 'walkways'), where('id', '==', locationId));
         const locationSnapshot = await getDocs(locationQuery);
 
-        // If the location does not exist, return an error
         if (locationSnapshot.empty) {
             return res.status(404).json({ error: 'Location not found' });
         }
 
-        // Get the Firestore document ID of the first matched location
         const locationDocId = locationSnapshot.docs[0].id;
 
-        // Add the Firestore document ID of the location and the start date to the history array
-        // Allow multiple entries for the same location with different start dates
         history.push({ locationId: locationDocId, startDate });
 
-        // Update the user's history array in Firestore
         await updateDoc(userDocRef, { history });
 
         res.status(200).json({ message: 'Location added to history' });
@@ -97,7 +84,6 @@ app.get('/history', async (req, res) => {
             return res.status(200).json({ message: 'No history found', history: [] });
         }
 
-        // Buscar todos os walkways e criar um mapa: { walkwayId (número): { docId, ...data } }
         const walkwaysSnapshot = await getDocs(WalkwayCollection);
         const walkwayMap = {};
         walkwaysSnapshot.docs.forEach(doc => {
@@ -107,7 +93,6 @@ app.get('/history', async (req, res) => {
             }
         });
 
-        // Combinar info do histórico com dados dos passadiços
         const locations = history.map(entry => {
             const walkway = walkwayMap[entry.walkwayId];
             if (!walkway) {
@@ -115,7 +100,7 @@ app.get('/history', async (req, res) => {
                 return null;
             }
             return { ...walkway, ...entry };
-        }).filter(Boolean); // remove entradas nulas
+        }).filter(Boolean);
 
         res.status(200).json({ history: locations });
     } catch (error) {
@@ -134,44 +119,34 @@ app.post('/removeHistory', async (req, res) => {
     }
 
     try {
-        // Get the user's document reference by querying the collection with the email
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email)); // Query to find user document
+        const q = query(usersRef, where('email', '==', email)); 
         const querySnapshot = await getDocs(q);
 
-        // Check if the user document exists
         if (querySnapshot.empty) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Get the first matching document reference
         const userDocRef = querySnapshot.docs[0].ref;
 
-        // Get current history or initialize an empty array
         const userData = querySnapshot.docs[0].data();
         const history = userData.history || [];
 
-        // Query the 'walkways' collection to find a document where the 'id' field matches the locationId
         const locationQuery = query(collection(db, 'walkways'), where('id', '==', locationId));
         const locationSnapshot = await getDocs(locationQuery);
 
-        // If the location does not exist, return an error
         if (locationSnapshot.empty) {
             return res.status(404).json({ error: 'Location not found' });
         }
 
-        // Get the Firestore document ID of the first matched location
         const locationDocId = locationSnapshot.docs[0].id;
 
-        // Check if the location is already in history (comparing Firestore document IDs, not the `id` field)
         if (!history.includes(locationDocId)) {
             return res.status(400).json({ error: 'Location not in history' });
         }
 
-        // Remove the Firestore document ID of the location from the history array
         const updatedHistory = history.filter(id => id !== locationDocId);
 
-        // Update the user's history array in Firestore
         await updateDoc(userDocRef, { history: updatedHistory });
 
         res.status(200).json({ message: 'Location removed from history' });

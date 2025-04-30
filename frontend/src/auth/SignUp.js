@@ -6,7 +6,6 @@ import {
   } from '@mui/material';
 import { styled } from '@mui/system';
 import theme from '../Theme/theme';
-import GoogleLogo from '../Theme/google-logo.svg';
 import logo from '../Theme/images/logo.png';
 import Checkbox from '@mui/material/Checkbox';
 import ListItemText from '@mui/material/ListItemText';
@@ -38,7 +37,7 @@ const LogoContainer = styled('img')({
 });
 const Title = styled(Typography)({
   ...theme.overrides.title,
-  fontSize: 'clamp(1.2rem, 2vw, 2rem)', // Responsivo
+  fontSize: 'clamp(1.2rem, 2vw, 2rem)', 
   fontWeight: 'bold',
   color: '#633f0f',
   marginBottom: 20
@@ -80,11 +79,11 @@ const SignUpModal = ({ onClose }) => {
     const [location, setLocation] = useState('');
     const [registrationDate, setRegistrationDate] = useState(() => {
       const today = new Date();
-      return today.toISOString().split('T')[0]; // formato "YYYY-MM-DD"
+      return today.toISOString().split('T')[0]; 
     });
         
     const [error, setError] = useState(null);
-    const [success, setSuccess] = useState(null); // Add success state
+    const [success, setSuccess] = useState(null); 
     const [open, setOpen] = useState(false);
 
     const handleOpen = () => setOpen(true);
@@ -111,7 +110,6 @@ const SignUpModal = ({ onClose }) => {
     
       try {
         if (role === "Staff") {
-          // Envia pedido de registo para aprovação
           const response = await Axios.post("http://localhost:8080/signup-pending", {
             email,
             password,
@@ -129,7 +127,6 @@ const SignUpModal = ({ onClose }) => {
           console.log('City Council registration pending approval:', response.data);
           setSuccess("Your request has been submitted and is awaiting admin approval.");
         } else {
-          // Registo normal
           const response = await Axios.post("http://localhost:8080/signup", {
             email, password, name, birthdate, userId, role, interests: selectedInterests
           },{
@@ -234,12 +231,12 @@ const SignUpModal = ({ onClose }) => {
                 variant="outlined"
                 fullWidth
                 required
-                InputLabel={{ shrink: true }} // Garante que o label fique visível
+                InputLabel={{ shrink: true }} 
                 InputProps={{
                   sx: {
-                    textAlign: 'right', // Alinha o texto à direita no campo
+                    textAlign: 'right', 
                     '& input': {
-                      textAlign: 'right', // Alinha a data à direita
+                      textAlign: 'right', 
                     }
                   }
                 }}
@@ -322,7 +319,6 @@ const SignUpModal = ({ onClose }) => {
         </ModalContent>
       </ModalStyled>
       
-      {/* Display error Snackbar */}
       {error && (
         <Snackbar
           open={Boolean(error)}
@@ -332,7 +328,6 @@ const SignUpModal = ({ onClose }) => {
         />
       )}
 
-      {/* Display success Snackbar */}
       {success && (
         <Snackbar
           open={Boolean(success)}

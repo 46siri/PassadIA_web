@@ -4,17 +4,14 @@ const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
 const { UserCollection, auth, db, WalkwayCollection, InterestCollection, storage } = require('../firebase-config');
-const {sendSignInLinkToEmail, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } = require('firebase/auth');
 const { getStorage } = require("firebase/storage");
 const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion, deleteDoc} = require('firebase/firestore');
 const { c, u } = require('tar');
-// get markers from walkways/marker.json
 const markers = require('../walkways/markers.json');
 const multer = require('multer');
 const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
-const { v4: uuidv4 } = require('uuid'); // For unique file names
+const { v4: uuidv4 } = require('uuid'); 
 const upload = multer({ storage: multer.memoryStorage() });
-// create a global variable to store the user data
 let userData = {};
 
 
@@ -81,7 +78,6 @@ app.post('/addWalkwayHistory', async (req, res) => {
         let historyUpdated = false;
         let alreadyFinished = false;
 
-        // Buscar o documento do passadiço correspondente ao walkwayId
         const walkwayQuery = query(collection(db, 'walkways'), where('id', '==', walkwayId));
         const walkwaySnapshot = await getDocs(walkwayQuery);
 
@@ -93,9 +89,9 @@ app.post('/addWalkwayHistory', async (req, res) => {
         const difficulty = walkwayDoc.data()?.specifics?.difficulty || 1;
 
         const difficultyPoints = {
-            1: 50,   // Fácil
-            2: 100,  // Médio
-            3: 200   // Difícil
+            1: 50,   
+            2: 100,  
+            3: 200   
         };
 
         const updatedHistory = currentHistory.map(entry => {
@@ -103,7 +99,6 @@ app.post('/addWalkwayHistory', async (req, res) => {
                 alreadyFinished = entry.finished;
                 historyUpdated = true;
 
-                // Atribuir pontos apenas se for agora marcado como concluído
                 if (!alreadyFinished && finished) {
                     newPoints += difficultyPoints[difficulty] || 50;
                 }
@@ -121,7 +116,6 @@ app.post('/addWalkwayHistory', async (req, res) => {
             return entry;
         });
 
-        // Se for um novo histórico
         if (!historyUpdated) {
             updatedHistory.push({
                 walkwayId,
@@ -168,7 +162,6 @@ app.get('/walkwayStatus', async (req, res) => {
     }
   
     try {
-        // Obter doc do utilizador
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('email', '==', email));
         const userSnapshot = await getDocs(q);
@@ -180,7 +173,6 @@ app.get('/walkwayStatus', async (req, res) => {
         const userData = userSnapshot.docs[0].data();
         const history = userData.history || [];
       
-        // Passo extra: obter Firestore walkwayId correspondente ao id numérico
         const walkwayQuery = query(collection(db, 'walkways'), where('id', '==', walkwayId));
         const walkwaySnapshot = await getDocs(walkwayQuery);
       
@@ -190,7 +182,6 @@ app.get('/walkwayStatus', async (req, res) => {
       
         const walkwayFirestoreId = walkwaySnapshot.docs[0].id;
       
-        // Agora sim: procurar no histórico pelo Firestore walkwayId
         const entry = history.find(entry => entry.walkwayId === walkwayFirestoreId);
       
         if (!entry) {
@@ -217,7 +208,6 @@ app.get('/getWalkwayComments', async (req, res) => {
     }
 
     try {
-        // Usar o campo `id` (que é um número no Firestore) para encontrar o documento correto
         const q = query(WalkwayCollection, where('id', '==', parseInt(walkwayId)));
         const snapshot = await getDocs(q);
 
@@ -246,7 +236,6 @@ app.get('/walkwayLikes', async (req, res) => {
     }
   
     try {
-      // Primeiro, procurar o passadiço com o campo `id` igual ao walkwayId fornecido
       const walkwayQuery = query(WalkwayCollection, where('id', '==', parseInt(walkwayId)));
       const walkwaySnapshot = await getDocs(walkwayQuery);
   
@@ -254,10 +243,8 @@ app.get('/walkwayLikes', async (req, res) => {
         return res.status(404).json({ error: 'Passadiço não encontrado' });
       }
   
-      // Obter o Firestore document ID do walkway (que é o que está guardado nos favoritos dos users)
       const walkwayDocId = walkwaySnapshot.docs[0].id;
   
-      // Agora vamos contar quantos utilizadores têm este passadiço nos seus favoritos
       const usersSnapshot = await getDocs(collection(db, 'users'));
       let likeCount = 0;
   
@@ -295,25 +282,21 @@ app.get('/walkwayLikes', async (req, res) => {
       const walkwayDoc = snapshot.docs[0];
       const comments = walkwayDoc.data().publicComments || [];
   
-      // Get unique user UIDs from the comments
       const userUids = [...new Set(comments.map(comment => comment.user))];
   
-      // Prepare nickname map
       const nicknames = {};
       const usersRef = collection(db, 'users');
   
-      // Fetch userId (nickname) for each UID
       for (const uid of userUids) {
         const userSnap = await getDoc(doc(usersRef, uid));
         if (userSnap.exists()) {
           const data = userSnap.data();
-          nicknames[uid] = data.userId || uid; // fallback to uid if userId not set
+          nicknames[uid] = data.userId || uid; 
         } else {
           nicknames[uid] = uid;
         }
       }
   
-      // Replace user UID with nickname
       const enrichedComments = comments.map(comment => ({
         ...comment,
         user: nicknames[comment.user] || comment.user,
@@ -329,20 +312,16 @@ app.get('/walkwayLikes', async (req, res) => {
 //------------------------------- add location to table --------------------------------
 app.post('/addLocations', async (req, res) => {
     try {
-        // Validate if markers is an array
         if (!Array.isArray(markers)) {
             return res.status(400).json({ message: 'Invalid data format. Markers should be an array.' });
         }
 
-        // Add the data to the 'walkways' collection in Firestore
         const collectionRef = collection(db, 'walkways');
 
-        // Loop through the markers array and add each marker to the Firestore collection
         for (const marker of markers) {
             await addDoc(collectionRef, marker);
         }
 
-        // Send a success response
         res.status(200).json({ message: 'Markers successfully added to the walkways collection.' });
     } catch (error) {
         console.error('Error adding markers to walkways collection:', error);
@@ -353,10 +332,8 @@ app.post('/addLocations', async (req, res) => {
 app.post('/addLocationJSON', async (req, res) => {
     const { locationJSON } = req.body;
     try {
-        // Add the data to the 'walkways' collection in Firestore
         const collectionRef = collection(db, 'walkways');
 
-        // Add the location data to the Firestore collection
         await addDoc(collectionRef, locationJSON);
         res.status(200).json({ message: 'Location added to walkways collection.' });
     } catch (error) {
@@ -385,7 +362,6 @@ app.get('/getGeojson', async (req, res) => {
     }
 
     try {
-        // Query para encontrar o documento com o ID numérico
         const walkwayQuery = query(collection(db, 'walkways'), where('id', '==', parseInt(walkwayId)));
         const walkwaySnapshot = await getDocs(walkwayQuery);
 
@@ -402,15 +378,13 @@ app.get('/getGeojson', async (req, res) => {
 
         let geojson;
 
-        // Caso seja uma URL (Storage)
         if (geojsonSource.startsWith('http')) {
             const response = await fetch(geojsonSource);
             if (!response.ok) {
                 throw new Error(`Failed to fetch GeoJSON from storage: ${response.statusText}`);
             }
-            geojson = await response.json(); // Faz o parsing do JSON vindo da URL
+            geojson = await response.json(); 
         } else {
-            // Caso contrário, assume que está em string JSON diretamente
             geojson = JSON.parse(geojsonSource);
         }
 
@@ -554,16 +528,12 @@ app.post('/addGeojson', async (req, res) => {
     }
 
     try {
-        // Referência ao documento do walkway específico na coleção
         const walkwayDoc = doc(WalkwayCollection, walkwayId);
 
-        // Converte o objeto GeoJSON para uma string JSON
         const geojsonString = JSON.stringify(geojson);
 
-        // Usa setDoc para substituir o documento com o novo geojson
         await setDoc(walkwayDoc, { geojson: geojsonString }, { merge: true });
 
-        // Enviar resposta de sucesso
         res.status(200).json({ message: 'GeoJSON data added to walkway document.' });
     } catch (error) {
         console.error('Error adding GeoJSON to walkway document:', error);
@@ -580,18 +550,14 @@ app.post('/addPictureWalkway', async (req, res) => {
     }
 
     try {
-        // Referência ao documento do walkway específico na coleção
         const walkwayDoc = doc(WalkwayCollection, walkwayId);
 
-        // Verificar se a URL da imagem é válida
         if (!pictureURL.startsWith('http')) {
             return res.status(400).json({ message: 'Invalid picture URL.' });
         }
 
-        // Adiciona a URL da imagem ao array de imagens
         await updateDoc(walkwayDoc, { pictures: arrayUnion(pictureURL) });
 
-        // Enviar resposta de sucesso
         res.status(200).json({ message: 'Picture added to walkway document.' });
     } catch (error) {
         console.error('Error adding picture to walkway document:', error);
@@ -611,7 +577,6 @@ app.post('/addWalkwayToMyList', async (req, res) => {
     }
 
     try {
-        // Buscar documento do utilizador
         const usersRef = collection(db, 'users');
         const userQuery = query(usersRef, where('email', '==', email));
         const userSnapshot = await getDocs(userQuery);
@@ -624,7 +589,6 @@ app.post('/addWalkwayToMyList', async (req, res) => {
         const userData = userSnapshot.docs[0].data();
         const createdWalkways = userData.createdWalkways || [];
 
-        // Buscar passadiço pelo ID numérico
         const walkwayQuery = query(WalkwayCollection, where('id', '==', walkwayId));
         const walkwaySnapshot = await getDocs(walkwayQuery);
 
@@ -634,12 +598,10 @@ app.post('/addWalkwayToMyList', async (req, res) => {
 
         const walkwayDocId = walkwaySnapshot.docs[0].id;
 
-        // Verificar se já está na lista
         if (createdWalkways.includes(walkwayDocId)) {
             return res.status(400).json({ error: 'Walkway already in your list' });
         }
 
-        // Adicionar à lista
         createdWalkways.push(walkwayDocId);
         await updateDoc(userDocRef, { createdWalkways });
 
@@ -724,7 +686,6 @@ app.post('/removeWalkway', async (req, res) => {
     }
   
     try {
-      // Buscar o utilizador
       const usersRef = collection(db, 'users');
       const userQuery = query(usersRef, where('email', '==', email));
       const userSnapshot = await getDocs(userQuery);
@@ -736,7 +697,6 @@ app.post('/removeWalkway', async (req, res) => {
       const userData = userSnapshot.docs[0].data();
       const createdWalkways = userData.createdWalkways || [];
   
-      // Buscar o passadiço
       const walkwayQuery = query(WalkwayCollection, where('id', '==', walkwayId));
       const walkwaySnapshot = await getDocs(walkwayQuery);
       if (walkwaySnapshot.empty) {
@@ -746,16 +706,13 @@ app.post('/removeWalkway', async (req, res) => {
       const walkwayDocRef = walkwaySnapshot.docs[0].ref;
       const walkwayDocId = walkwaySnapshot.docs[0].id;
   
-      // Verifica se o passadiço foi mesmo criado por este utilizador
       if (!createdWalkways.includes(walkwayDocId)) {
         return res.status(403).json({ error: 'You do not have permission to delete this walkway' });
       }
   
-      // Atualiza a lista do utilizador
       const updatedCreatedWalkways = createdWalkways.filter(id => id !== walkwayDocId);
       await updateDoc(userDocRef, { createdWalkways: updatedCreatedWalkways });
   
-      // Remove o documento do passadiço
       await deleteDoc(walkwayDocRef);
   
       console.log(`✔️ Walkway ${walkwayId} removed successfully. by ${email}`);
@@ -782,7 +739,6 @@ app.post('/updateWalkway', upload.single('primaryImage'), async (req, res) => {
         return res.status(404).json({ error: 'Walkway not found.' });
       }
   
-      // Só adiciona campos que têm valor definido
       const updates = { name, description, district, region };
       Object.keys(updates).forEach(key => {
         if (updates[key] === undefined || updates[key] === null || updates[key] === '') {
@@ -790,7 +746,6 @@ app.post('/updateWalkway', upload.single('primaryImage'), async (req, res) => {
         }
       });
   
-      // Se houver nova imagem, adiciona
       if (req.file) {
         const imageRef = ref(storage, `images/${uuidv4()}_${req.file.originalname}`);
         await uploadBytes(imageRef, req.file.buffer);

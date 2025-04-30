@@ -108,7 +108,6 @@ const MyWalkways = ({ onLogout }) => {
         setEditingWalkway(walkway);
     };
     
-    // Handle Logout
     const handleLogOut = async () => {
         setError(null);
         setSuccess(null);
@@ -126,7 +125,6 @@ const MyWalkways = ({ onLogout }) => {
         }
     };
 
-    // Menu Handlers 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
@@ -208,7 +206,6 @@ const MyWalkways = ({ onLogout }) => {
           console.log("✔️ Walkway updated:", response.data);
           setSuccess("Walkway updated successfully!");
           setEditingWalkway(null);
-          // Atualizar a lista se necessário aqui
         } catch (err) {
           console.error(" Error updating walkway:", err);
           setError("Error updating walkway: " + err.message);
@@ -276,10 +273,9 @@ const MyWalkways = ({ onLogout }) => {
                             <CardStyled>
                                 <CardContent>
                                     <Grid2 container spacing={2} columns={16}>
-                                        {/* Left side with title and image */}
                                         <Grid2 size={8}>
                                             <Typography variant="h6" component="h2">
-                                                <strong>{location.name}</strong> {/* Title in bold */}
+                                                <strong>{location.name}</strong> 
                                             </Typography>
                                             <img
                                                 src={location.primaryImage}
@@ -288,7 +284,6 @@ const MyWalkways = ({ onLogout }) => {
                                               />
                                         </Grid2>
 
-                                        {/* Right side with description and button */}
                                         <Grid2 size={8}>
                                             <Typography variant="body2" component="p" style={{ marginTop: '10px' }}>
                                                 {location.description}

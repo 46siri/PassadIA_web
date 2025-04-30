@@ -15,17 +15,16 @@ import { useNavigate } from 'react-router-dom';
 
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
-import { channel } from "process";
 
 export const AppContainer = styled(Container)(({ theme }) => ({
     ...theme.root,
     zIndex: 9999,
-    backgroundColor: '#ffffff', // Alterado de #f5f5f5 para branco puro
+    backgroundColor: '#ffffff', 
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'column', // adiciona para alinhar conteúdo verticalmente
+    flexDirection: 'column', 
     paddingTop: theme.spacing(4),
   }));
 
@@ -137,7 +136,6 @@ const CityCouncilProfile = ({ onLogout }) => {
 
     const navigate = useNavigate();
 
-    // Handle Logout
     const handleLogOut = async () => {
         setError(null);
         setSuccess(null);
@@ -162,7 +160,6 @@ const CityCouncilProfile = ({ onLogout }) => {
 
     };
 
-    // Menu Handlers 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
@@ -308,7 +305,6 @@ const CityCouncilProfile = ({ onLogout }) => {
             </Menu>
 
             <Grid2>
-                {/* Avatar Section */}
                 <Grid2 item xs={12} sm={5} style={{ textAlign: 'center' }} marginBottom={10}>
                     <Typography variant="h4" gutterBottom>{institutionName}</Typography>
                     <label htmlFor="avatar-upload">
@@ -320,7 +316,7 @@ const CityCouncilProfile = ({ onLogout }) => {
                                 onMouseLeave={() => setShowChangePhoto(false)}
                                 style={{ 
                                     cursor: 'pointer',
-                                    opacity: uploading ? 0.5 : 1, // Deixar avatar meio transparente durante upload
+                                    opacity: uploading ? 0.5 : 1, 
                                     transition: 'opacity 0.3s',
                                 }}
                             />
@@ -372,7 +368,6 @@ const CityCouncilProfile = ({ onLogout }) => {
                 </Grid2>
 
 
-                {/* Profile Information Section */}
                 <Grid2 container spacing={2}>
                     <CardStyled>
                         {isEditing ? (
@@ -388,7 +383,6 @@ const CityCouncilProfile = ({ onLogout }) => {
                         ) : (
                             <CardContent>
                                 <Grid2 container spacing={2} size={12}>
-                                    {/* Left Column */}
                                     <Grid2 item xs={12} sm={6}>
                                         <Typography variant="body1">
                                             <AccountCircleIcon/> <strong>Institution Id:</strong> {userId}
@@ -405,7 +399,6 @@ const CityCouncilProfile = ({ onLogout }) => {
 
                                     </Grid2>
 
-                                    {/* Right Column */}
                                     <Grid2 item xs={12} sm={6}>
                                         <Typography variant="body1">
                                             <AccountCircleIcon /> <strong>Name of Institution:</strong> {institutionName}

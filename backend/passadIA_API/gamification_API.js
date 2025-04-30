@@ -4,17 +4,14 @@ const cors = require('cors');
 const cookieParser = require("cookie-parser");
 const http = require('http');
 const { UserCollection, auth, db, WalkwayCollection, InterestCollection } = require('../firebase-config');
-const {sendSignInLinkToEmail, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } = require('firebase/auth');
 const { getStorage } = require("firebase/storage");
 const { addDoc, getDocs, updateDoc, doc, collection, query, where , getDoc, setDoc, arrayUnion} = require('firebase/firestore');
 const { c, u } = require('tar');
-// get markers from walkways/marker.json
 const markers = require('../walkways/markers.json');
 const multer = require('multer');
 const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
-const { v4: uuidv4 } = require('uuid'); // For unique file names
+const { v4: uuidv4 } = require('uuid'); 
 const upload = multer({ storage: multer.memoryStorage() });
-// create a global variable to store the user data
 let userData = {};
 
 
@@ -22,10 +19,8 @@ let userData = {};
 //------------------------------- award points for existing comments --------------------------------
 app.post('/awardPointsForExistingComments', async (req, res) => {
     try {
-      // 1. Mapa para contar comentários por utilizador
       const userCommentCounts = {};
   
-      // 2. Vai buscar todos os passadiços
       const walkwaysSnapshot = await getDocs(WalkwayCollection);
       walkwaysSnapshot.forEach((doc) => {
         const data = doc.data();
@@ -39,7 +34,6 @@ app.post('/awardPointsForExistingComments', async (req, res) => {
         });
       });
   
-      // 3. Vai buscar todos os utilizadores
       const usersSnapshot = await getDocs(UserCollection);
       let updatedCount = 0;
   
@@ -77,27 +71,21 @@ app.post('/addPoints', async (req, res) => {
     }
 
     try {
-        // Get the user's document reference by querying the collection with the email
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', email)); // Query to find user document
+        const q = query(usersRef, where('email', '==', email)); 
         const querySnapshot = await getDocs(q);
 
-        // Check if the user document exists
         if (querySnapshot.empty) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Get the first matching document reference
         const userDocRef = querySnapshot.docs[0].ref;
 
-        // Get current points or initialize to 0
         const userData = querySnapshot.docs[0].data();
         const currentPoints = userData.points || 0;
 
-        // Add the points to the current total
         const updatedPoints = currentPoints + points;
 
-        // Update the user's points in Firestore
         await updateDoc(userDocRef, { points: updatedPoints });
 
         res.status(200).json({ message: 'Points added successfully' });
@@ -111,29 +99,25 @@ app.post('/addPoints', async (req, res) => {
 
 //------------------------------- get user points --------------------------------
 app.get('/points', async (req, res) => {
-    const email = req.session.user?.email || userData.email;
+    const email = req.session.user?.email;
 
     if (!email) {
         return res.status(401).json({ error: 'User is not authenticated' });
     }
 
     try {
-        // Query the user's document using their email
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('email', '==', email));
         const querySnapshot = await getDocs(q);
 
-        // Check if the user document exists
         if (querySnapshot.empty) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Get user data and points
         const userData = querySnapshot.docs[0].data();
         const points = userData.points || 0;
 
         res.status(200).json({ points });
-        //console.log('User points fetched:', points);
     } catch (error) {
         console.error('Error fetching points:', error);
         res.status(500).json({ error: 'Error fetching points' });
@@ -146,28 +130,24 @@ app.get('/points', async (req, res) => {
 // level 4 -> "Expert" -> 3000-9999 points
 // level 5 -> "Supreme Explorer" -> 10000+ points
 app.get('/level', async (req, res) => {
-    const email = req.session.user?.email || userData.email;
+    const email = req.session.user?.email;
 
     if (!email) {
         return res.status(401).json({ error: 'User is not authenticated' });
     }
 
     try {
-        // Query the user's document using their email
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('email', '==', email));
         const querySnapshot = await getDocs(q);
 
-        // Check if the user document exists
         if (querySnapshot.empty) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Get user data and points
         const userData = querySnapshot.docs[0].data();
         const points = userData.points || 0;
 
-        // Determine the user's level based on the points
         let level;
         if (points < 300) {
             level = 'Beginner';
@@ -182,7 +162,6 @@ app.get('/level', async (req, res) => {
         }
 
         res.status(200).json({ level });
-        //console.log('User level fetched:', level);
     } catch (error) {
         console.error('Error fetching level:', error);
         res.status(500).json({ error: 'Error fetching level' });
@@ -229,30 +208,24 @@ app.get('/rank', async (req, res) => {
     }
 
     try {
-        // Query the user's document using their email
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('email', '==', email));
         const querySnapshot = await getDocs(q);
 
-        // Check if the user document exists
         if (querySnapshot.empty) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        // Get user data and points
         const userData = querySnapshot.docs[0].data();
         const points = userData.points || 0;
 
-        // Query all users and sort them by points in descending order
         const allUsersSnapshot = await getDocs(usersRef);
         const allUsers = allUsersSnapshot.docs.map(doc => doc.data());
         allUsers.sort((a, b) => b.points - a.points);
 
-        // Find the user's rank by comparing the points
         const userRank = allUsers.findIndex(user => user.email === email) + 1;
 
         res.status(200).json({ rank: userRank });
-        //console.log('User rank fetched:', userRank);
     } catch (error) {
         console.error('Error fetching rank:', error);
         res.status(500).json({ error: 'Error fetching rank' });
@@ -263,14 +236,13 @@ app.get('/rank', async (req, res) => {
 //------------------------------- add public comment --------------------------------
 app.post('/addPublicComment', async (req, res) => {
     const { walkwayId, experience } = req.body;
-    const email = req.session.user?.email || userData.email;
+    const email = req.session.user?.email;
   
     if (!email || !walkwayId || !experience) {
       return res.status(400).json({ error: 'Email, walkway ID e experiência são obrigatórios.' });
     }
   
     try {
-      // Obter o utilizador
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('email', '==', email));
       const snapshot = await getDocs(q);
@@ -283,7 +255,6 @@ app.post('/addPublicComment', async (req, res) => {
       const userData = userDoc.data();
       const customUserId = userData.userId || userDoc.id;
   
-      // Obter o walkway
       const walkwayQuery = query(collection(db, 'walkways'), where('id', '==', walkwayId));
       const walkwaySnap = await getDocs(walkwayQuery);
   
@@ -295,24 +266,20 @@ app.post('/addPublicComment', async (req, res) => {
       const docRef = walkwayDoc.ref;
       const currentComments = walkwayDoc.data().publicComments || [];
   
-      // Criar comentário
       const newComment = {
         user: customUserId,
         experience,
         timestamp: new Date().toISOString()
       };
   
-      // Atualizar comentários públicos
       await updateDoc(docRef, {
         publicComments: [...currentComments, newComment]
       });
   
-      // Atualizar pontos
       await updateDoc(userDoc.ref, {
         points: (userData.points || 0) + 30
       });
   
-      // Atualizar experiência no histórico
       const history = userData.history || [];
       const updatedHistory = history.map(entry => {
         if (entry.walkwayId === walkwayId) {
@@ -359,7 +326,7 @@ app.post('/migrateComments', async (req, res) => {
               const currentComments = walkwayDoc.data().publicComments || [];
   
               const newComment = {
-                user: userId, // aqui usamos o userId correto
+                user: userId, 
                 experience,
                 timestamp: startDate || new Date().toISOString(),
               };

@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Route, Routes, BrowserRouter as Router } from 'react-router-dom'; // Import Router
+import { Route, Routes, BrowserRouter as Router } from 'react-router-dom'; 
 import App from './App'; 
 import SignInModal from './auth/SignIn';
 import SignUpModal from './auth/SignUp';

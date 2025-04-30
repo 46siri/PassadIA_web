@@ -46,9 +46,8 @@ const ForgotPassModal = ({ onClose }) => {
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
-    console.log("Sending password reset request for email:", email); // Log email
+    console.log("Sending password reset request for email:", email); 
     try {
-      // Chama o endpoint do backend para enviar o email de redefinição de senha
       const response = await Axios.post("http://localhost:8080/forgotPassword", { email },{
         withCredentials: true
       });

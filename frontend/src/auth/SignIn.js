@@ -4,7 +4,6 @@ import {Button, Box, CssBaseline, Typography, TextField, Snackbar, ThemeProvider
 import { styled } from '@mui/system';
 import { useNavigate } from 'react-router-dom';
 import theme from '../Theme/theme';
-import GoogleLogo from '../Theme/google-logo.svg';
 import logo from '../Theme/images/logo.png';
 import ForgotPassModal from './ForgotPass'; 
 
@@ -56,17 +55,14 @@ const SignInModal = ({ onClose }) => {
   const handleSignIn = async (e) => {
     e.preventDefault();
     try {
-        // Step 1: Sign in the user
         const signInResponse = await Axios.post("http://localhost:8080/signin", { email, password }, {
           withCredentials: true
         });
         console.log("Sign-in response:", signInResponse.data);
 
-        // Step 2: Set user session data
         setUser(signInResponse.data.user);
         console.log("User:", signInResponse.data.user);
 
-        // Step 3: Fetch user data, including role
         const userDataResponse = await Axios.get("http://localhost:8080/user", {
             params: { email: signInResponse.data.user.email }
         },{
@@ -76,6 +72,7 @@ const SignInModal = ({ onClose }) => {
         let role = userDataResponse.data.role;
         console.log("Role:", role);
         if(role === "Walker") {
+          console.log("Walker role detected");
             navigate('/WalkerBoard');
         } else if (role === "Staff"){
             navigate('/CityCouncilBoard');
@@ -93,15 +90,6 @@ const SignInModal = ({ onClose }) => {
 };
 
 
-
-  const handleGoogleSignIn = async () => {
-    try {
-      // Logic to handle Google Sign-in
-      window.location.href = "http://localhost:8080/auth/google";
-    } catch (error) {
-      setError('Google sign-in failed: ' + error.message);
-    }
-  };
   const openForgotPassModal = () => {
     setForgotPassOpen(true);
   };
@@ -120,18 +108,6 @@ const SignInModal = ({ onClose }) => {
           <Title variant="h2" gutterBottom>
             Sign In
           </Title>
-          <GoogleButton
-            variant="contained"
-            onClick={handleGoogleSignIn}
-            startIcon={<img src={GoogleLogo} alt="Google Logo" />}
-          >
-            Sign In with Google
-          </GoogleButton>
-          <Box>
-            <OrText variant="body2">
-              _________ OR __________
-            </OrText>
-          </Box>
           <FormGroup onSubmit={handleSignIn}>
             <TextF
               type="email"

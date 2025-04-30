@@ -15,7 +15,6 @@ import { useNavigate } from 'react-router-dom';
 import theme from '../Theme/theme';
 import logo from '../Theme/images/baselogo.jpg';
 
-// Styled components using MUI's new styled API
 const AppContainer = styled(Container)(({ theme }) => ({
   ...theme.root,
   zIndex: 9999,
@@ -60,7 +59,6 @@ const RecommendedWalkwaysContainer = styled(Box)(({ theme }) => ({
   overflowX: 'auto',
 
 }));
-// Add 'backgroundImage' as a prop to WalkwayBox
 const WalkwayBox = styled(Paper)(({ theme, backgroundImage }) => ({
   minWidth: '200px',
   height: '150px',
@@ -79,7 +77,7 @@ const WalkwayBox = styled(Paper)(({ theme, backgroundImage }) => ({
     transform: 'scale(1.05)',
     boxShadow: theme.shadows[6],
   },
-  backgroundBlendMode: 'overlay', // Helps with readability
+  backgroundBlendMode: 'overlay', 
 }));
 
 //--------------------- Main Component ---------------------//
@@ -162,7 +160,6 @@ const WalkerBoard = ({ onLogout }) => {
     if (!isMapLoaded || !mapRef.current || !geojsonData) return;
   
     try {
-      // Limpa o anterior se existir
       if (dataLayerRef.current) {
         dataLayerRef.current.setMap(null);
       }
@@ -229,7 +226,6 @@ const WalkerBoard = ({ onLogout }) => {
 
   useEffect(() => {
     if (selectedMarker) {
-      // Calculate difficulty when the selected marker changes
       const calculateDifficulty = (difficultyLevel) => {
         if (difficultyLevel === 1) {
           return 'Easy';
@@ -267,10 +263,10 @@ const WalkerBoard = ({ onLogout }) => {
         lat: marker.coordinates.latitude,
         lng: marker.coordinates.longitude,
       },
-      name: marker.name || 'Unknown Name', // Fallback for missing names
-      description: marker.description || 'No description available', // Fallback for missing descriptions
-      image: marker.primaryImage || 'default_image.jpg', // Fallback for missing image
-      distance: marker.specifics?.distance || 'Unknown Distance', // Safe access for nested properties
+      name: marker.name || 'Unknown Name', 
+      description: marker.description || 'No description available', 
+      image: marker.primaryImage || 'default_image.jpg', 
+      distance: marker.specifics?.distance || 'Unknown Distance', 
       difficulty: marker.specifics?.difficulty || 'Unknown Difficulty',
       region: marker.region || 'Unknown Region',
       district: marker.district || 'Unknown District',
@@ -323,7 +319,6 @@ const WalkerBoard = ({ onLogout }) => {
         setUserHistory(response.data.history || []);
         console.log("User history:", response.data.history);
   
-        // se já houver um marcador selecionado, força atualização do seu estado
         if (selectedMarker) {
           updateMarkerState(response.data.history, selectedMarker);
         }
@@ -378,16 +373,13 @@ const WalkerBoard = ({ onLogout }) => {
         experience: ""
       };
   
-      // Atualiza o histórico local para manter consistência com o backend
       updateHistoryEntry(newEntry);
   
-      // Atualiza estados da interface
       setSuccess("Walk started!");
       setIsStarted(true);
       setIsCompleted(false);
       setStoredComment(null);
   
-      // Reaplica a lógica de estado do marcador
       updateMarkerState([...userHistory, newEntry], selectedMarker);
   
     } catch (error) {
@@ -421,7 +413,7 @@ const WalkerBoard = ({ onLogout }) => {
       setSuccess("Walk successfully added to your history!");
       setIsStarted(false);
       setIsCompleted(true);
-      setComment(''); // limpa o campo após submissão
+      setComment(''); 
     } catch (err) {
       setError("Failed to mark as completed: " + err.message);
     }
@@ -519,7 +511,7 @@ const WalkerBoard = ({ onLogout }) => {
   const handleSubmitComment = async () => {
     try {
       await Axios.post("http://localhost:8080/addPublicComment", {
-        walkwayId: selectedMarker.id,  // <-- deve ser o campo `id`, que é um número!
+        walkwayId: selectedMarker.id,  
         experience: comment,
       }, { withCredentials: true });
   
@@ -537,7 +529,7 @@ const WalkerBoard = ({ onLogout }) => {
       setStoredComment(comment);
       setComment('');
     } catch (err) {
-      console.error("❌ Failed to submit comment:", err);
+      console.error(" Failed to submit comment:", err);
       setError("Failed to submit comment: " + err.message);
     }
   };
@@ -738,7 +730,6 @@ const WalkerBoard = ({ onLogout }) => {
                 {success && <div style={{ color: "green" }}>{success}</div>}
               </div>
 
-              {/* Regra: Se o percurso já foi concluído, mostra apenas "Start to walk again" */}
               {selectedMarker && isCompleted && (
                 <Button
                   variant="outlined"
@@ -750,7 +741,6 @@ const WalkerBoard = ({ onLogout }) => {
                 </Button>
               )}
 
-              {/* Se nunca foi começado nem concluído */}
               {selectedMarker && !isStarted && !isCompleted && (
                 <Button
                   variant="contained"
@@ -762,7 +752,6 @@ const WalkerBoard = ({ onLogout }) => {
                 </Button>
               )}
 
-              {/* Se está começado mas ainda não concluído */}
               {selectedMarker && isStarted && !isCompleted && (
                 <Button
                   variant="contained"
@@ -776,7 +765,6 @@ const WalkerBoard = ({ onLogout }) => {
             </DialogActions>
 
           </Dialog>
-          {/* Seção Top Walkways */}
           <Typography variant="h6" color="primary" style={{ marginTop: theme.spacing(10), textAlign: 'left' }}>
             Top Walkways Users Liked
           </Typography>
@@ -786,7 +774,7 @@ const WalkerBoard = ({ onLogout }) => {
               <WalkwayBox
                 key={walkway.id}
                 onClick={() => handleTopWalkwayClick(walkway.id)}
-                style={{ width: '300px', height: '180px' }} // Define o tamanho fixo das caixas
+                style={{ width: '300px', height: '180px' }} 
               >
                 <img 
                   src={walkway.primaryImage} 
@@ -811,7 +799,7 @@ const WalkerBoard = ({ onLogout }) => {
                 <WalkwayBox
                   key={walkway.id}
                   onClick={() => handleTopWalkwayClick(walkway.id)}
-                  style={{ width: '300px', height: '180px' }} // Fixed box size
+                  style={{ width: '300px', height: '180px' }} 
                 >
                   <img 
                     src={walkway.primaryImage } 
@@ -840,7 +828,7 @@ const WalkerBoard = ({ onLogout }) => {
               <WalkwayBox
                 key={walkway.id}
                 onClick={() => handleTopExploredWalkwayClick(walkway.id)}
-                style={{ width: '300px', height: '180px' }} // Define o tamanho fixo das caixas
+                style={{ width: '300px', height: '180px' }} 
               >
                 <img 
                   src={walkway.primaryImage} 

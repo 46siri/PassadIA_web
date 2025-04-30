@@ -71,12 +71,18 @@ useEffect(() => {
 }, []);
 
 
+
+
   const handleDelete = async (type, id) => {
     try {
       if (type === 'user') {
         const user = users.find(u => u.id === id); 
         if (!user) return;
-        await Axios.post(`http://localhost:8080/deleteUser/${id}`, { withCredentials: true });
+        await Axios.post(
+          'http://localhost:8080/deleteUser',
+          { email: user.email },
+          { withCredentials: true }
+        );
         setUsers(prev => prev.filter(u => u.id !== id));
         console.log('User deleted successfully.');
       } else if (type === 'walkway') {
@@ -137,7 +143,6 @@ useEffect(() => {
 
         {tabIndex === 0 && (
         <>
-            {/* Walker Users */}
             <Paper
                 elevation={1}
                 sx={{
@@ -187,7 +192,6 @@ useEffect(() => {
             </Table>
             </Paper>
 
-            {/* City Council Users */}
             <Paper
                 elevation={1}
                 sx={{
